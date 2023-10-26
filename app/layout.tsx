@@ -1,26 +1,28 @@
-import type { Metadata } from 'next'
+"use client"
+
 import { Inter } from 'next/font/google'
 import './globals.css'
 import Header from '../components/Header'
+import { SessionProvider } from "next-auth/react";
 
 const inter = Inter({ subsets: ['latin'] })
 
-export const metadata: Metadata = {
-  title: 'DeFolio',
-  description: 'Next Gen Portfolio Tracker',
+type RootLayoutProps = {
+  children: React.ReactNode,
+  session: any
 }
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode
-}) {
+export default function RootLayout({ children, session }: RootLayoutProps) {
+  
+  
   return (
-    <html lang="en">
-      <body className={`${inter.className} sm:bg-black`}>
-        <Header />
-        {children}
+    <SessionProvider session={session}>
+      <html lang="en">
+        <body className={`${inter.className} sm:bg-black`}>
+          <Header />
+          {children}
         </body>
-    </html>
+      </html>
+    </SessionProvider>
   )
 }
