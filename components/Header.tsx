@@ -19,7 +19,7 @@ function Header() {
           )
           :
           (
-            <div>IsPortfolio</div>
+            <button className="text-white bg-lightPurple bg-opacity-75 rounded-15 hover:cursor-pointer hover:bg-opacity-100 transition py-2 px-4">Connect UP</button>
           )}
         </div>
       </div>

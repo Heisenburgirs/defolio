@@ -34,6 +34,20 @@ const config: Config = {
         large: '32px',
         xlarge: '48px',
       },
+      keyframes: {
+        'popup-in': {
+          '0%': { transform: 'scale(0.95)', opacity: '0' },
+          '100%': { transform: 'scale(1)', opacity: '1' },
+        },
+        'popup-out': {
+          '0%': { transform: 'scale(1)', opacity: '1' },
+          '100%': { transform: 'scale(0.95)', opacity: '0' },
+        },
+      },
+      animation: {
+        'popup-in': 'popup-in 0.2s ease-out forwards',
+        'popup-out': 'popup-out 0.2s ease-out forwards',
+      },
     },
     colors: {
       background: "#f8fafb",
