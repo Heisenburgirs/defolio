@@ -36,8 +36,11 @@ const config: Config = {
       },
     },
     colors: {
+      background: "#f8fafb",
       black: "#000000",
-      white: "#ffffff"
+      white: "#ffffff",
+      purple: "#646eb5",
+      lightPurple: "#8993d1",
     },
   },
   plugins: [],

@@ -19,3 +19,23 @@
 body {
   color: rgb(var(--foreground-rgb));
 }
+
+/* Scrollbar styles */
+::-webkit-scrollbar-track {
+  background: white;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #8993d1;
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #7a82b8;
+}

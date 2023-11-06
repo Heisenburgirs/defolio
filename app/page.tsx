@@ -1,10 +1,9 @@
 "use client"
 
+import Link from 'next/link'
+import { useSession } from "next-auth/react";
 import Image from 'next/image'
 import ethereum from '@/public/ethereum.png'
-import Link from 'next/link'
-import { signIn, signOut } from 'next-auth/react';
-import { useSession } from "next-auth/react";
 
 export default function Landing() {
   const { data: session } = useSession();
@@ -15,28 +14,33 @@ export default function Landing() {
   }
 
   return (
-    <main className="flex flex-col w-full h-full sm:px-4 sm:py-4 md:px-16 md:py-16 lg:px-32 lg:py-24 gap-64 justify-between">
-      <div className="flex w-full justify-between">
-        <div className="flex flex-col gap-32">
+    <main className="flex flex-col w-full h-full sm:px-4 sm:py-4 md:px-8 md:py-12 lg:px-24 lg:py-12 gap-32 justify-center items-center">
+      <div className="flex w-full justify-between  p-8 rounded-15">
+        <div className="flex flex-col gap-16">
           <div className="flex flex-col gap-8">
             <div className="flex flex-col">
-              <div className="text-white text-xlarge font-bold">Leading Portfolio Tracker</div>
-              <div className="text-white text-xlarge font-bold">& Web3 Developer API</div>
+              <div className="text-purple text-large md:text-xlarge font-bold">Universal Profile Management</div>
             </div>
-            <div className="flex flex-col gap-2">
-              <div className="text-white text-medium"><span className="bg-white text-black font-bold py-1 px-4">For Users:</span> Track your assets in real time using DeCommas API</div>
-              <div className="text-white text-medium"><span className="bg-white text-black font-bold py-1 px-4">For Developers:</span> Use robust DeCommas API to fetch user data</div>
+            <div className="text-purple text-medium">Manage your Universal Profile with enhanced tools.</div>
+          </div>
+          <div className="flex flex-col gap-4">
+            <div className="flex sm:flex-col base:flex-row gap-4 text-purple text-xsmall">
+                <div className="border border-lightPurple border-opacity-20 w-[170px] bg-white py-4 px-6 rounded-15 hover:opacity-100 hover:cursor-pointer opacity-90 transition">Inheritance Tools</div>
+              <div className="border border-lightPurple border-opacity-20 w-[140px] bg-white py-4 px-6 rounded-15 hover:opacity-100 hover:cursor-pointer opacity-90 transition">Key Manager</div>
+            </div>
+            <div className="flex sm:flex-col md:flex-row gap-4 text-purple text-xsmall">
+              <div className="flex gap-4 sm:flex-col base:flex-row">
+              <div className="border border-lightPurple border-opacity-20 w-[140px] bg-white py-4 px-6 rounded-15 hover:opacity-100 hover:cursor-pointer opacity-90 transition text-purple">Carbon Fee</div>
+              <div className="border border-lightPurple border-opacity-20 w-[140px] bg-white py-4 px-6 rounded-15 hover:opacity-100 hover:cursor-pointer opacity-90 transition">Session Keys</div>
+              </div>
+                <div className="border border-lightPurple border-opacity-20 w-[120px] bg-white py-4 px-6 rounded-15 hover:opacity-100 hover:cursor-pointer opacity-90 transition">Guardians</div>
             </div>
           </div>
           <div className="flex gap-4 items-center">
-            <Link href="/portfolio" className="border border-white text-white hover:bg-white hover:text-black hover:cursor-pointer py-2 px-4 transition">Portfolio</Link>
-            <Link href="/portfolio" className="border border-white text-white hover:bg-white hover:text-black hover:cursor-pointer py-2 px-4 transition">Developer Portal</Link>
-            <div onClick={() => signIn('google')} className="text-white">test</div>
+            <Link href="/portfolio" className="text-medium border border-purple focus-white rounded-10 text-white bg-purple hover:bg-white hover:text-purple hover:cursor-pointer py-2 px-4 transition">Open Dapp -{'>'}</Link>
           </div>
         </div>
-        {/*<Image src={ethereum} width={350} alt="Ethereum" className="mr-16 xl:block sm:hidden"/>*/}
       </div>
-      <div className="text-white opacity-75">I'm the one who buidls</div>
     </main>
   )
 }

@@ -7,28 +7,21 @@ import Link from 'next/link';
 function Header() {
   const pathname = usePathname();
   const isHome = pathname === "/";
-  const isPortfolio = pathname === "/portfolio";
-  const isPortal = pathname === "/portal";
 
   return (
-    <div className="flex justify-between items-center py-4 px-6 border-b border-white">
-      <Link href="/" className="text-xl font-bold text-white">DeFolio</Link>
-      <div className="text-white">
-        {isHome ?
-        (
-          <div>/* Made by Heisen🍔 */</div>
-        )
-        :
-        (
-          isPortfolio ?
+    <div className="flex justify-between items-center sm:px-4 sm:py-6 md:px-8 md:py-6 bg-white shadow">
+      <div className="w-full flex justify-between text-purple">
+        <Link href="/" className="text-xl font-bold text-purple">DeFolio</Link>
+        <div className="text-purple">
+          {isHome ?
           (
-            <div>IsPortfolio</div>
+            <a href="https://github.com/Heisenburgirs?tab=repositories" target="_blank" className="sm:text-xxsmall base:text-small">/* Made by Heisen 🍔 */</a>
           )
           :
           (
-            <div>isPortal</div>
-          )
-        )}
+            <div>IsPortfolio</div>
+          )}
+        </div>
       </div>
     </div>
   );
