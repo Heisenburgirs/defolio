@@ -21,7 +21,7 @@ import search from '@/public/icons/search.png';
 // Dashboard Menu
 const MenuItem = ({ itemName, selectedMenuItem, menuSelection } : {itemName: string, selectedMenuItem: string, menuSelection: (itemName: string) => void}) => {
   const isSelected = selectedMenuItem === itemName;
-  const baseClasses = "min-w-[150px] text-center lg:text-left rounded-15 py-4 px-6 cursor-pointer transition";
+  const baseClasses = "min-w-[150px] lg:text-left rounded-15 flex sm:items-center sm:justify-center lg:items-left lg:justify-start lg sm:py-2 lg:py-4 px-6 cursor-pointer transition";
   const textClass = isSelected ? "text-white" : "text-purple hover:text-white";
   const bgClass = isSelected ? "bg-purple" : "hover:bg-lightPurple";
   
@@ -89,7 +89,7 @@ export default function Portfolio() {
   const [balanceVisible, setBalanceVisible] = useState<boolean>(true);
 
   // Dashboard Menu
-  const menuItems = ["Assets", "Key Manager", "Guardians", "Session Keys", "Inheritance", "Carbon"];
+  const menuItems = ["Assets", "Key Manager", "Guardians", "Session Keys", "Inheritance", "Carbon", "Send & Receive", "Bridge"];
 
   // Select dashboard menu items
   const menuSelection = (itemName: string) => {
@@ -105,7 +105,7 @@ export default function Portfolio() {
   };
 
   return (
-    <main className="flex flex-col lg:flex-row w-full h-full sm:px-4 sm:py-6 md:px-8 md:py-8 lg:px-8 lg:py-8 gap-8">
+    <main className="flex flex-col lg:flex-row w-full h-full sm:px-4 sm:py-6 md:px-8 md:py-8 lg:px-8 lg:py-6 gap-8">
       <section className="flex flex-col gap-10 w-full lg:w-1/5 xl:w-1/6  bg-white rounded-15 shadow px-6 py-8">
         <h1 className="text-medium px-6 font-bold text-purple">Dashboard</h1>
         <ul 
@@ -129,7 +129,7 @@ export default function Portfolio() {
         </ul>
       </section>
 
-      <section className="flex flex-col gap-10 w-full lg:w-4/5 xl:w-5/6 h-full">
+      <section className="flex flex-col gap-6 w-full lg:w-4/5 xl:w-5/6 h-full">
         <div className="flex sm:flex-col md:flex-row w-full justify-between md:items-center sm:gap-4 md:gap-0">
           <div className="flex flex-col gap-2">
             <h1 className="opacity-75 text-small">Portfolio Value</h1>
@@ -139,12 +139,12 @@ export default function Portfolio() {
             </div>
           </div>
 
-          <div className="flex items-center gap-4" >
+          <div className="flex sm:flex-col base:flex-row sm:items-left md:items-center gap-4" >
             <div className="relative">
-              <input type="text" placeholder="Search for a token..." className="focus:outline-purple text-xsmall py-2 px-10 bg-background border border-lightPurple border-opacity-75 rounded-15" />
+              <input type="text" placeholder="Search for a token..." className="focus:outline-purple text-xsmall py-2.5 base:pl-10 sm:px-8 base:px-4 md:px-10 bg-background border border-lightPurple border-opacity-75 rounded-15" />
               <Image src={search} width={16} height={16} alt="Search" className="absolute left-0 ml-4 top-1/2 transform -translate-y-1/2" /> 
             </div>
-            <div ref={ref} className="relative">
+            <div ref={ref} className="sm:w-[125px] relative">
               <div
                 className={`flex items-center justify-between cursor-pointer border border-purple border-opacity-75 rounded-15 p-2 gap-2 bg-lightBlack transition ${isDropDownOpen ? "bg-lightPurple bg-opacity-20" : "hover:bg-lightPurple hover:bg-opacity-20"}`}
                 onClick={toggleDropdown}
@@ -156,7 +156,7 @@ export default function Portfolio() {
 
               {isDropDownOpen && (
                 <div
-                  className={`flex flex-col gap-2 bg-white absolute left-0 right-0 ml-[-130px] mt-2 border w-[250px] py-6 px-4 border-purple border-opacity-75 rounded-15 z-10 ${dropdownVisible ? 'animate-popup-in' : 'animate-popup-out'}`}
+                  className={`flex flex-col gap-2 bg-white absolute left-0 right-0 sm:ml-[0px] base:ml-[-130px] mt-2 border w-[250px] py-6 px-4 border-purple border-opacity-75 rounded-15 z-10 ${dropdownVisible ? 'animate-popup-in' : 'animate-popup-out'}`}
                   style={{ animationFillMode: 'forwards' }}
                   onAnimationEnd={() => {
                     if (!dropdownVisible) {

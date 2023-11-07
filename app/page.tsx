@@ -1,17 +1,8 @@
 "use client"
 
 import Link from 'next/link'
-import { useSession } from "next-auth/react";
-import Image from 'next/image'
-import ethereum from '@/public/ethereum.png'
 
 export default function Landing() {
-  const { data: session } = useSession();
-
-  if (session) {
-    console.log(session.user?.name);
-    console.log(session.user?.email);
-  }
 
   return (
     <main className="flex flex-col w-full h-full sm:px-4 sm:py-4 md:px-8 md:py-12 lg:px-24 lg:py-12 gap-32 justify-center items-center">

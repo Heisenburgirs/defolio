@@ -2,7 +2,6 @@
 
 import { Inter } from 'next/font/google';
 import './globals.css';
-import { SessionProvider } from "next-auth/react";
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 
@@ -15,16 +14,13 @@ type RootLayoutProps = {
 
 export default function RootLayout({ children, session }: RootLayoutProps) {
   
-  
   return (
-    <SessionProvider session={session}>
-      <html lang="en">
-        <body className={`${inter.className} sm:bg-background flex flex-col h-[100vh]`}>
-          <Header />
-          {children}
-          <Footer />
-        </body>
-      </html>
-    </SessionProvider>
+    <html lang="en">
+      <body className={`${inter.className} sm:bg-background flex flex-col h-[100vh]`}>
+        <Header />
+        {children}
+        <Footer />
+      </body>
+    </html>
   )
 }
