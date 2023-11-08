@@ -3,7 +3,7 @@
 import { Inter } from 'next/font/google';
 import '@rainbow-me/rainbowkit/styles.css';
 import './globals.css';
-import { Header } from '../components/Header';
+import Header from '../components/Header';
 import Footer from '../components/Footer';
 
 // Rainbowkit/Wagmi

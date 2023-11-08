@@ -21,7 +21,7 @@ enum NotificationType {
   Default
 }
 
-export const Header = () => {
+function Header () {
   const pathname = usePathname();
   const isHome = pathname === "/";
 
@@ -107,3 +107,5 @@ export const Header = () => {
     </div>
   );
 }
+
+export default Header;

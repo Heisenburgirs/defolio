@@ -4,7 +4,7 @@ import React from 'react';
 import { usePathname } from "next/navigation";
 import Link from 'next/link';
 
-function Header() {
+function Footer() {
   const pathname = usePathname();
   const isHome = pathname === "/";
 
@@ -22,4 +22,4 @@ function Header() {
   );
 }
 
-export default Header;
+export default Footer;
