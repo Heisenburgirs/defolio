@@ -18,6 +18,9 @@ import downArrow from '@/public/icons/down-arrow.png';
 // Search
 import search from '@/public/icons/search.png';
 
+// Wagmi test
+import { SignMessage } from '../hooks/wagmi'
+
 // Dashboard Menu
 const MenuItem = ({ itemName, selectedMenuItem, menuSelection } : {itemName: string, selectedMenuItem: string, menuSelection: (itemName: string) => void}) => {
   const isSelected = selectedMenuItem === itemName;
@@ -183,6 +186,7 @@ export default function Portfolio() {
           </div>
         </div>
         <div className="flex h-full bg-white rounded-15 shadow px-6 py-8">
+          <SignMessage />
           test
         </div>
       </section>
