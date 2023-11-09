@@ -1,11 +1,6 @@
 import { RefObject, useRef, useState } from 'react';
 import { MouseEvent, TouchEvent, WheelEvent } from 'react';
 
-interface CustomUListElement extends HTMLUListElement {
-  startX?: number;
-  scrollLeftStart?: number;
-}
-
 export const useDraggableScroll = () => {
   const ref: RefObject<CustomUListElement> = useRef<CustomUListElement>(null);
   const [animationFrame, setAnimationFrame] = useState<number | null>(null);
@@ -110,6 +105,7 @@ export const useDraggableScroll = () => {
     scrollToElement
   };
 };
+
 
 export const formatAddress = (address: string) => {
   // Check if the address is valid and has the expected length (42 characters including the '0x' prefix)

@@ -15,6 +15,7 @@ export const currencyOptions: CurrencyOption[] = [
 ];
 
 const CurrencyDropdown = ({ selectedCurrency, onSelect }: CurrencyDropdownProps) => {
+
   const [isDropDownOpen, setIsDropDownOpen] = useState(false);
   const [dropdownVisible, setDropdownVisible] = useState(false);
   const ref = useRef<HTMLDivElement>(null);

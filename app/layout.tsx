@@ -1,18 +1,21 @@
 "use client"
 
 import { Inter } from 'next/font/google';
-import '@rainbow-me/rainbowkit/styles.css';
 import './globals.css';
+import 'react-toastify/dist/ReactToastify.css';
+import '@rainbow-me/rainbowkit/styles.css';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
+import ToastProvider from '@/components/toast/ToastProvider'
+import { CurrencyDataProvider } from '@/components/context/CurrencyContext';
 
 // Rainbowkit/Wagmi
 import merge from 'lodash.merge';
 import { RainbowKitProvider, connectorsForWallets, lightTheme, Theme } from '@rainbow-me/rainbowkit';
 import { Chain, configureChains, createConfig, WagmiConfig } from 'wagmi';
 import { publicProvider } from 'wagmi/providers/public';
-import { jsonRpcProvider } from '@wagmi/core/providers/jsonRpc'
 import { InjectedConnector } from 'wagmi/connectors/injected'
+import { jsonRpcProvider } from 'wagmi/providers/jsonRpc'
 
 // Lukso chain configuration
 const LUKSO_TESTNET: Chain = {
@@ -54,7 +57,7 @@ const luksoWalletConnector = () => ({
     const connector = new InjectedConnector({
       chains: [LUKSO_TESTNET],
       options: {
-        getProvider: () => window.lukso,
+        getProvider: () => (typeof window !== 'undefined' && window.lukso ? window.lukso : undefined),
         name: 'Universal Profile',
       },
     },
@@ -98,17 +101,10 @@ const { chains, publicClient } = configureChains(
   [LUKSO_TESTNET],
   [
     jsonRpcProvider({
-      rpc: (chain) => {
-        if (chain.id === LUKSO_TESTNET.id) {
-          const returnObj = LUKSO_TESTNET.rpcUrls.default.http.toString()
-          const replace = returnObj.replace(/""/g, '')
-          return { http: replace }
-        }
-        // Return null or undefined for chains that do not use this provider
-        return null;
-      },
+      rpc: () => ({
+        http: `https://rpc.testnet.lukso.network`,
+      }),
     }),
-    publicProvider()
   ]
 );
 
@@ -140,9 +136,13 @@ export default function RootLayout({ children, session }: RootLayoutProps) {
       <body className={`${inter.className} sm:bg-background flex flex-col h-[100vh]`}>
         <WagmiConfig config={wagmiConfig}>
           <RainbowKitProvider chains={chains} theme={customTheme}>
-            <Header />
-            {children}
-            <Footer />
+            <ToastProvider>
+              <CurrencyDataProvider>
+                <Header />
+                {children}
+                <Footer />
+              </CurrencyDataProvider>
+            </ToastProvider>
           </RainbowKitProvider>
         </WagmiConfig>
       </body>

@@ -7,39 +7,95 @@ import '../globals.css';
 // Navbar
 import Navbar from '@/components/navbar/Navbar';
 
+// Search
+import SearchBar from '@/components/searchbar/SearchBar'
+
+// Portfolio Value
+import PortfolioValue from '@/components/portfolio/PortfolioValue';
+
 // Currency dropdown
 import CurrencyDropdown from '@/components/currency/CurrencyDropdown';
 import { currencyOptions } from '@/components/currency/CurrencyDropdown';
 
-// Balance Icons
-import Image from 'next/image';
-import hide from '@/public/icons/hide.svg';
-import show from '@/public/icons/show.svg';
-
-
-// Search
-import search from '@/public/icons/search.png';
-
 // Wagmi test
 import { SignMessage } from '../hooks/wagmi'
 
+// Exchange rates
+import { useCurrencyData } from '@/components/context/CurrencyContext';
+import { LSPFactory } from '@lukso/lsp-factory.js';
+import { usePublicClient } from 'wagmi';
+import { ethers } from 'ethers'
+import { useAccount } from 'wagmi'
+import LSP from "@lukso/lsp-smart-contracts/artifacts/LSP7Mintable.json";
+
+
+// Navbar Menu
+const menuItems = ["Assets", "Key Manager", "Guardians", "Session Keys", "Inheritance", "Carbon", "Send & Receive", "Bridge"];
+
 export default function Portfolio() {
-  // Custom hook for overflow scroll
-  const { ref: ulRef, onMouseDown, onMouseMove, onMouseUp, onMouseLeave, onTouchStart, onTouchMove, onTouchEnd, onWheel, scrollToElement } = useDraggableScroll();
-  const [selectedMenuItem, setSelectedMenuItem] = useState("Assets");
-  
-  const [selectedCurrency, setSelectedCurrency] = useState(currencyOptions[0]);
+  const { address } = useAccount()
+  const publicClient = usePublicClient()
+  const provider = async () => {
+    console.log(publicClient)
+    console.log("address, address", address)
+
+    const provider = new ethers.providers.Web3Provider(window.lukso);
+    const signer = provider.getSigner();
+    const lspFactory = new LSPFactory(provider, {
+      chainId: 4201,
+    });
+
+    const myContracts = await lspFactory.LSP7DigitalAsset.deploy({
+      isNFT: false,
+      controllerAddress: await signer.getAddress() || "",
+      name: 'MYTOKEN',
+      symbol: 'DEMO',
+    });
+
+    console.log(myContracts)
+  }
+
+  const mint = async () => {
+    const provider = new ethers.providers.Web3Provider(window.lukso);
+    const signer = provider.getSigner();
+    const contract = "0xf9056FF9ad48cC5A7F5FFf29db0Ec4eC31dbDB67";
+
+    const myContract = new ethers.Contract(contract, LSP.abi, signer);
+
+    const tx = await myContract.mint(address, "10000000000000000", false, '0x');
+
+    console.log("result", tx)
+  }
+
+  const { currencyData, error, loading } = useCurrencyData();
+  const [balance, setBalance] = useState<number>(100); // Your initial USD balance
+  const [convertedBalances, setConvertedBalances] = useState<{ USD: number; GBP: number; EUR: number }>({
+    USD: balance,
+    GBP: 0,
+    EUR: 0,
+  });
+
+  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyOption>(currencyOptions[0]);
   
   // Currency Dropdown
   const handleCurrencySelect = (currency: CurrencyOption) => {
     setSelectedCurrency(currency);
   };
-  
-  // Balance
-  const [balanceVisible, setBalanceVisible] = useState<boolean>(true);
 
-  // Navbar Menu
-  const menuItems = ["Assets", "Key Manager", "Guardians", "Session Keys", "Inheritance", "Carbon", "Send & Receive", "Bridge"];
+  // Convert balance when rates or balance change
+  useEffect(() => {
+    if (currencyData) {
+      setConvertedBalances({
+        USD: balance,
+        GBP: balance * currencyData.GBP,
+        EUR: balance * currencyData.EUR,
+      });
+    }
+  }, [balance, currencyData]);
+
+  // Custom hook for overflow scroll
+  const { ref: ulRef, onMouseDown, onMouseMove, onMouseUp, onMouseLeave, onTouchStart, onTouchMove, onTouchEnd, onWheel, scrollToElement } = useDraggableScroll();
+  const [selectedMenuItem, setSelectedMenuItem] = useState("Assets");
 
   // Select navbar menu items
   const menuSelection = (itemName: string) => {
@@ -68,19 +124,13 @@ export default function Portfolio() {
 
       <section className="flex flex-col gap-6 w-full lg:w-4/5 xl:w-5/6 h-full">
         <div className="flex sm:flex-col md:flex-row w-full justify-between md:items-center sm:gap-4 md:gap-0">
-          <div className="flex flex-col gap-2">
-            <h1 className="opacity-75 text-small">Portfolio Value</h1>
-            <div className="flex gap-6 items-center">
-              <h2 className="text-large font-bold text-purple">{balanceVisible ? "$0.00" : "******"}</h2>
-              <Image onClick={() => {setBalanceVisible(!balanceVisible)}} src={balanceVisible ? hide : show} width={24} height={24} alt="Hide Balance" className="hover:cursor-pointer" />
-            </div>
-          </div>
+          <PortfolioValue
+            balance={convertedBalances[selectedCurrency.symbol as keyof typeof convertedBalances]}
+            currencySymbol={selectedCurrency.symbol}
+          />
 
           <div className="flex sm:flex-col base:flex-row sm:items-left md:items-center base:justify-between md:justify-none gap-4" >
-            <div className="relative">
-              <input type="text" placeholder="Search for a token..." className="focus:outline-purple text-xsmall py-2.5 base:pl-10 sm:px-12 base:px-4 md:px-10 bg-background border border-lightPurple border-opacity-75 rounded-15" />
-              <Image src={search} width={16} height={16} alt="Search" className="absolute left-0 ml-4 top-1/2 transform -translate-y-1/2" /> 
-            </div>
+            <SearchBar placeholder="Search for a token..." />
             <CurrencyDropdown
               selectedCurrency={selectedCurrency}
               onSelect={handleCurrencySelect}
@@ -88,7 +138,8 @@ export default function Portfolio() {
           </div>
         </div>
         <div className="flex h-full bg-white rounded-15 shadow px-6 py-8">
-          {}
+          <div onClick={provider}>tets</div>
+          <div onClick={mint}>Mint</div>
         </div>
       </section>
     </main>
