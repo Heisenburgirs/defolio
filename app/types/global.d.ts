@@ -84,6 +84,18 @@ declare global {
   interface CurrencyDataProviderProps {
     children: ReactNode;
   }
+
+  // Token Table
+  type TableRow = {
+    Image: string[];
+    Name: string[];
+    Symbol: string[];
+    Price: string[];
+    Change24: string[];
+    TokenAmount: string[];
+    TokenValue: string[];
+  };
+  
 }
 
 // Export to satisfy the TypeScript compiler

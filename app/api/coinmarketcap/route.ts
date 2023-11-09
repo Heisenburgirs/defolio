@@ -7,7 +7,7 @@ export async function GET() {
   try {
     const coinMarketResponse = await fetch(url, {
       headers: {
-        'X-CMC_PRO_API_KEY': process.env.COINMARKETCAP_API_KEY || "",
+        'X-CMC_PRO_API_KEY': process.env.COINMARKETCAP_API_KEY || "3f23f57e-7ef9-4e36-8952-fe807091f272",
       },
     });
 

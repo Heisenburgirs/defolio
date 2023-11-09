@@ -9,7 +9,7 @@ const SearchBar: React.FC<SearchBarProps> = ({ placeholder }) => {
       <input
         type="text"
         placeholder={placeholder}
-        className="focus:outline-purple text-xsmall py-2.5 base:pl-10 sm:px-12 base:px-4 md:px-10 bg-background border border-lightPurple border-opacity-75 rounded-15"
+        className="focus:outline-purple text-xsmall py-2.5 base:pl-10 sm:px-10 base:px-4 md:px-10 bg-background border border-lightPurple border-opacity-75 rounded-15"
       />
       <Image
         src={searchIcon}
