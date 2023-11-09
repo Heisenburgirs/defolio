@@ -26,14 +26,81 @@ import { LSPFactory } from '@lukso/lsp-factory.js';
 import { usePublicClient } from 'wagmi';
 import { ethers } from 'ethers'
 import { useAccount } from 'wagmi'
-import LSP from "@lukso/lsp-smart-contracts/artifacts/LSP7Mintable.json";
-
+import LSP7Mintable from "@lukso/lsp-smart-contracts/artifacts/LSP7Mintable.json";
+import { useBalance } from 'wagmi';
 
 // Navbar Menu
 const menuItems = ["Assets", "Key Manager", "Guardians", "Session Keys", "Inheritance", "Carbon", "Send & Receive", "Bridge"];
 
 export default function Portfolio() {
-  const { address } = useAccount()
+  const { address, isConnected, isDisconnected } = useAccount()
+  const { data, isError, isLoading } = useBalance({
+    address: address,
+  })
+  const { currencyData, error, loading } = useCurrencyData();
+
+  const [convertedBalances, setConvertedBalances] = useState<{ USD: number; GBP: number; EUR: number }>({
+    USD: 0,
+    GBP: 0,
+    EUR: 0,
+  });
+
+  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyOption>(currencyOptions[0]);
+
+  useEffect(() => {
+    async function loadData() {
+      console.log("test")
+      try {
+        const response = await fetch('/api/coinmarketcap');
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const responsePrice = await response.json();
+
+        const lyxPrice = Number(responsePrice)
+
+        console.log("lyxPrice", lyxPrice)
+        console.log("data.formatted", data?.formatted)
+        const totalPriceLYX = Number(data?.formatted) * lyxPrice;
+
+        setConvertedBalances({
+          USD: Number(totalPriceLYX.toFixed(2)),
+          GBP: Number((totalPriceLYX * currencyData.GBP).toFixed(2)),
+          EUR: Number((totalPriceLYX * currencyData.EUR).toFixed(2)),
+        });
+        
+      } catch (error) {
+        console.error("Failed to fetch data:", error);
+      }
+    }
+  
+    loadData();
+  }, [data, address, currencyData, isConnected])
+  
+  // Currency Dropdown
+  const handleCurrencySelect = (currency: CurrencyOption) => {
+    setSelectedCurrency(currency);
+  };
+
+  // Custom hook for overflow scroll
+  const { ref: ulRef, onMouseDown, onMouseMove, onMouseUp, onMouseLeave, onTouchStart, onTouchMove, onTouchEnd, onWheel, scrollToElement } = useDraggableScroll();
+  const [selectedMenuItem, setSelectedMenuItem] = useState("Assets");
+
+  // Select navbar menu items
+  const menuSelection = (itemName: string) => {
+    setSelectedMenuItem(itemName);
+    // Check that ulRef.current is not null before trying to access its properties
+    if (ulRef.current) {
+      // Cast the returned Element to an HTMLElement
+      const menuItemElement = ulRef.current.querySelector(`li[data-name="${itemName}"]`) as HTMLElement;
+      if (menuItemElement) {
+        scrollToElement(menuItemElement);
+      }
+    }
+  };
+  
   const publicClient = usePublicClient()
   const provider = async () => {
     console.log(publicClient)
@@ -60,55 +127,12 @@ export default function Portfolio() {
     const signer = provider.getSigner();
     const contract = "0xf9056FF9ad48cC5A7F5FFf29db0Ec4eC31dbDB67";
 
-    const myContract = new ethers.Contract(contract, LSP.abi, signer);
+    const myContract = new ethers.Contract(contract, LSP7Mintable.abi, signer);
 
     const tx = await myContract.mint(address, "10000000000000000", false, '0x');
 
     console.log("result", tx)
   }
-
-  const { currencyData, error, loading } = useCurrencyData();
-  const [balance, setBalance] = useState<number>(100); // Your initial USD balance
-  const [convertedBalances, setConvertedBalances] = useState<{ USD: number; GBP: number; EUR: number }>({
-    USD: balance,
-    GBP: 0,
-    EUR: 0,
-  });
-
-  const [selectedCurrency, setSelectedCurrency] = useState<CurrencyOption>(currencyOptions[0]);
-  
-  // Currency Dropdown
-  const handleCurrencySelect = (currency: CurrencyOption) => {
-    setSelectedCurrency(currency);
-  };
-
-  // Convert balance when rates or balance change
-  useEffect(() => {
-    if (currencyData) {
-      setConvertedBalances({
-        USD: balance,
-        GBP: balance * currencyData.GBP,
-        EUR: balance * currencyData.EUR,
-      });
-    }
-  }, [balance, currencyData]);
-
-  // Custom hook for overflow scroll
-  const { ref: ulRef, onMouseDown, onMouseMove, onMouseUp, onMouseLeave, onTouchStart, onTouchMove, onTouchEnd, onWheel, scrollToElement } = useDraggableScroll();
-  const [selectedMenuItem, setSelectedMenuItem] = useState("Assets");
-
-  // Select navbar menu items
-  const menuSelection = (itemName: string) => {
-    setSelectedMenuItem(itemName);
-    // Check that ulRef.current is not null before trying to access its properties
-    if (ulRef.current) {
-      // Cast the returned Element to an HTMLElement
-      const menuItemElement = ulRef.current.querySelector(`li[data-name="${itemName}"]`) as HTMLElement;
-      if (menuItemElement) {
-        scrollToElement(menuItemElement);
-      }
-    }
-  };
 
   return (
     <main className="flex flex-col lg:flex-row w-full h-full sm:px-4 sm:py-6 md:px-8 md:py-8 lg:px-8 lg:py-6 gap-8">
