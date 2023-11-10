@@ -16,6 +16,7 @@ const config: Config = {
     screens: {
       "sm": "250px",
       "base": "420px",
+      "keymanager": "540px",
       "md": "768px",
       "lg": "1100px",
       "xl": "1400px"
@@ -35,6 +36,7 @@ const config: Config = {
         xlarge: '48px',
       },
       keyframes: {
+        // Currency dropdown animation
         'popup-in': {
           '0%': { transform: 'scale(0.95)', opacity: '0' },
           '100%': { transform: 'scale(1)', opacity: '1' },
@@ -43,10 +45,26 @@ const config: Config = {
           '0%': { transform: 'scale(1)', opacity: '1' },
           '100%': { transform: 'scale(0.95)', opacity: '0' },
         },
+
+        // Keymanager dropdown animation
+        'reveal': {
+          '0%': { maxHeight: '0' },
+          '100%': { maxHeight: '1500px' },
+        },
+        'conceal': {
+          '0%': { maxHeight: '1500px' },
+          '100%': { maxHeight: '0' },
+        },
       },
+      
       animation: {
+        // Currency dropdown animation
         'popup-in': 'popup-in 0.2s ease-out forwards',
         'popup-out': 'popup-out 0.2s ease-out forwards',
+        
+        // Keymanager dropdown animation
+        'reveal': 'reveal 0.5s ease-in-out forwards',
+        'conceal': 'conceal 0.5s ease-in-out forwards',
       },
     },
     colors: {
@@ -55,6 +73,7 @@ const config: Config = {
       white: "#ffffff",
       purple: "#646eb5",
       lightPurple: "#8993d1",
+      green: '#4cca61',
     },
   },
   plugins: [],

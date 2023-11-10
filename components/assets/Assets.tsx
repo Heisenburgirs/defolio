@@ -2,11 +2,15 @@ import React, { useState, useEffect } from 'react';
 import CurrencyDropdown, { currencyOptions } from '../currency/CurrencyDropdown';
 import PortfolioValue from '../portfolio/PortfolioValue';
 import SearchBar from '../searchbar/SearchBar';
-import { LSPFactory } from '@lukso/lsp-factory.js';
+//import { LSPFactory } from '@lukso/lsp-factory.js';
 import { ethers } from 'ethers';
 import { useAccount, useBalance, usePublicClient } from 'wagmi';
 import { useCurrencyData } from '../context/CurrencyContext';
 import LSP7Mintable from "@lukso/lsp-smart-contracts/artifacts/LSP7Mintable.json";
+import { ERC725, ERC725JSONSchema } from '@erc725/erc725.js';
+import lsp3ProfileSchema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.json' assert { type: 'json' };
+import LSP4Schema from '@erc725/erc725.js/schemas/LSP4DigitalAsset.json';
+import Web3 from 'web3';
 
 const Assets = () => {
 
@@ -72,7 +76,7 @@ const Assets = () => {
   /* FUNCTIONS LSP7 */
 
   const publicClient = usePublicClient()
-  const provider = async () => {
+  {/*const provider = async () => {
     console.log(publicClient)
     console.log("address, address", address)
 
@@ -90,7 +94,7 @@ const Assets = () => {
     });
 
     console.log(myContracts)
-  }
+  }*/}
 
   const mint = async () => {
     const provider = new ethers.providers.Web3Provider(window.lukso);
@@ -102,6 +106,34 @@ const Assets = () => {
     const tx = await myContract.mint(address, "10000000000000000", false, '0x');
 
     console.log("result", tx)
+  }
+
+  const assets = async () => {
+    const erc725js = new ERC725(lsp3ProfileSchema as ERC725JSONSchema[], address, 'https://rpc.testnet.lukso.gateway.fm',
+      {
+        ipfsGateway: 'https://api.universalprofile.cloud/ipfs',
+      },
+    );
+
+    const profileData = await erc725js.getData();
+    console.log(profileData);
+
+    const receivedAssetsDataKey = await erc725js.fetchData('LSP5ReceivedAssets[]');
+    if (Array.isArray(receivedAssetsDataKey.value)) {
+
+      const contractAddress = receivedAssetsDataKey.value[0]
+      console.log(contractAddress);
+
+      const RPC_ENDPOINT = 'https://rpc.testnet.lukso.gateway.fm';
+      const config = { ipfsGateway: "https://api.universalprofile.cloud/ipfs" };
+      const provider = new Web3.providers.HttpProvider(RPC_ENDPOINT);
+      
+      const digitalAsset = new ERC725(LSP4Schema as ERC725JSONSchema[], contractAddress, provider, config);
+
+      const digitalAssetMetadata = await digitalAsset.fetchData('LSP4TokenName')
+
+      console.log(digitalAssetMetadata)
+    }
   }
 
   return (
@@ -123,6 +155,7 @@ const Assets = () => {
       <div className="flex h-full bg-white rounded-15 shadow px-6 py-8">
         {/*<div onClick={provider}>tets</div>
         <div onClick={mint}>Mint</div>*/}
+        <div onClick={assets}>Assets</div>
 
         <div className="flex flex-col w-full gap-2">
           <thead className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12">
@@ -142,7 +175,7 @@ const Assets = () => {
           <tbody className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12 py-2">
             <tr  className="grid sm:grid-cols-3 lg:grid-cols-12 items-center">
               <td className="flex items-center gap-4 sm:col-span-2 base:col-span-1 lg:col-span-5 text-purple font-normal opacity-75">
-                <div>🍌</div>
+                {/*<div>🍌</div>*/}
                 <div className="flex flex-col">
                   <div className="text-small font-bold">ETH</div>
                   <div className="text-xsmall opacity-75">Ethereum</div>

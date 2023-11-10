@@ -95,6 +95,49 @@ declare global {
     TokenAmount: string[];
     TokenValue: string[];
   };
+
+  // Controller Permissions
+  interface Permissions {
+    ADDCONTROLLER: boolean;
+    ADDEXTENSIONS: boolean;
+    ADDUNIVERSALRECEIVERDELEGATE: boolean;
+    CALL: boolean;
+    CHANGEEXTENSIONS: boolean;
+    CHANGEOWNER: boolean;
+    CHANGEUNIVERSALRECEIVERDELEGATE: boolean;
+    DECRYPT: boolean;
+    DELEGATECALL: boolean;
+    DEPLOY: boolean;
+    EDITPERMISSIONS: boolean;
+    ENCRYPT: boolean;
+    EXECUTE_RELAY_CALL: boolean;
+    REENTRANCY: boolean;
+    SETDATA: boolean;
+    SIGN: boolean;
+    STATICCALL: boolean;
+    SUPER_CALL: boolean;
+    SUPER_DELEGATECALL: boolean;
+    SUPER_SETDATA: boolean;
+    SUPER_STATICCALL: boolean;
+    SUPER_TRANSFERVALUE: boolean;
+    TRANSFERVALUE: boolean;
+  }  
+
+  interface ControllerPermission {
+    address: string;
+    permissions: Permission;
+  }
+
+  interface ToggleSwitchProps {
+    isToggled: boolean;
+    onToggle: () => void;
+    controllerAddress: string;
+    permissionKey: string;
+  }
+
+  type VisibilityState = {
+    [key: string]: boolean;
+  };
   
 }
 
