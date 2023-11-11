@@ -42,7 +42,7 @@ const customTheme = merge(lightTheme(), {
   colors: {
     accentColor: '#8993d1',
     accentColorForeground: 'white',
-  },
+  }
 } as Theme);
 
 const luksoWalletConnector = () => ({
@@ -133,7 +133,7 @@ export default function RootLayout({ children, session }: RootLayoutProps) {
   
   return (
     <html lang="en">
-      <body className={`${inter.className} sm:bg-background flex flex-col h-[100vh]`}>
+      <body className={`${inter.className} sm:bg-background flex flex-col justify-between h-[100vh]`}>
         <WagmiConfig config={wagmiConfig}>
           <RainbowKitProvider chains={chains} theme={customTheme}>
             <ToastProvider>

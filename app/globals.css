@@ -20,6 +20,9 @@ body {
   color: rgb(var(--foreground-rgb));
 }
 
+[data-rk] {
+}
+
 /* Scrollbar styles */
 ::-webkit-scrollbar-track {
   background: white;

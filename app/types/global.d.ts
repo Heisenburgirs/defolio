@@ -79,7 +79,6 @@ declare global {
 
   // Token Table
   type TableRow = {
-    Image: string[];
     Name: string[];
     Symbol: string[];
     Price: string[];
@@ -133,6 +132,11 @@ declare global {
   
   // Permissions Menu Items
   type PermissionKey = keyof typeof permissionMapping;
+
+  // Encoding Permissions
+  interface PermissionsEncoded {
+    [key: string]: boolean;
+  }
 }
 
 // Export to satisfy the TypeScript compiler

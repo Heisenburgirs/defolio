@@ -10,6 +10,7 @@ import LSP7Mintable from "@lukso/lsp-smart-contracts/artifacts/LSP7Mintable.json
 import { ERC725, ERC725JSONSchema } from '@erc725/erc725.js';
 import lsp3ProfileSchema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.json' assert { type: 'json' };
 import LSP4Schema from '@erc725/erc725.js/schemas/LSP4DigitalAsset.json';
+import LSP7DigitalAsset from '@lukso/lsp-smart-contracts/artifacts/LSP7DigitalAsset.json'
 import Web3 from 'web3';
 
 const Assets = () => {
@@ -41,7 +42,10 @@ const Assets = () => {
         const responsePrice = await response.json();
 
         const lyxPrice = Number(responsePrice)
-        const totalPriceLYX = Number(data?.formatted) * lyxPrice;
+        const balanceValue = data?.formatted && !isNaN(Number(data.formatted)) 
+        ? Number(data.formatted) 
+        : 0;
+        const totalPriceLYX = balanceValue * lyxPrice;
 
         setConvertedBalances({
           USD: Number(totalPriceLYX.toFixed(2)),
@@ -59,7 +63,6 @@ const Assets = () => {
 
   // Table
   const [tableRow, setTableRow] = useState<TableRow>({
-    Image: [''],
     Name: [''],
     Symbol: [''],
     Price: [''],
@@ -116,23 +119,37 @@ const Assets = () => {
     );
 
     const profileData = await erc725js.getData();
-    console.log(profileData);
+    console.log("profileData", profileData);
 
     const receivedAssetsDataKey = await erc725js.fetchData('LSP5ReceivedAssets[]');
     if (Array.isArray(receivedAssetsDataKey.value)) {
 
       const contractAddress = receivedAssetsDataKey.value[0]
-      console.log(contractAddress);
+      console.log("contractAddress", contractAddress);
 
-      const RPC_ENDPOINT = 'https://rpc.testnet.lukso.gateway.fm';
-      const config = { ipfsGateway: "https://api.universalprofile.cloud/ipfs" };
-      const provider = new Web3.providers.HttpProvider(RPC_ENDPOINT);
-      
-      const digitalAsset = new ERC725(LSP4Schema as ERC725JSONSchema[], contractAddress, provider, config);
+      const myerc725 = new ERC725(LSP4Schema as ERC725JSONSchema[], contractAddress, "https://rpc.testnet.lukso.gateway.fm/",{
+        ipfsGateway: "https://api.universalprofile.cloud/ipfs"
+      });
 
-      const digitalAssetMetadata = await digitalAsset.fetchData('LSP4TokenName')
+      const web3 = new Web3("https://rpc.testnet.lukso.network");
+      const lsp7Contract = new web3.eth.Contract (
+        LSP7DigitalAsset.abi as any,
+        contractAddress
+      )
 
-      console.log(digitalAssetMetadata)
+      // @ts-ignore
+      const balance = await lsp7Contract.methods.balanceOf("0x1a62AcD2277d5FaC5266F71f2B968fB55d83BC72").call()
+      console.log(address)
+      console.log(balance)
+
+      const digitalAssetMetadata1 = await myerc725.fetchData('LSP4Metadata');
+      const digitalAssetMetadata2 = await myerc725.fetchData('LSP4TokenSymbol');
+      const digitalAssetMetadata3 = await myerc725.fetchData('LSP4TokenName');
+      const digitalAssetMetadata4 = await myerc725.fetchData('LSP4Creators[]');
+      console.log(digitalAssetMetadata1);
+      console.log(digitalAssetMetadata2);
+      console.log(digitalAssetMetadata3);
+      console.log(digitalAssetMetadata4);
     }
   }
 
@@ -158,39 +175,39 @@ const Assets = () => {
         <div onClick={assets}>Assets</div>
 
         <div className="flex flex-col w-full gap-2">
-          <thead className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12">
-            <tr className="grid sm:grid-cols-3 lg:grid-cols-12">
-              <th className="sm:col-span-2 base:col-span-1 lg:col-span-5 text-purple font-normal opacity-75 flex">
+          <div className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12">
+            <div className="grid sm:grid-cols-3 lg:grid-cols-12">
+              <div className="sm:col-span-2 base:col-span-1 lg:col-span-5 text-purple font-normal opacity-75 flex">
                 Token
-              </th>
-              <th className="sm:hidden base:flex sm:col-span-1 lg:col-span-4 text-purple font-normal opacity-75">
+              </div>
+              <div className="sm:hidden base:flex sm:col-span-1 lg:col-span-4 text-purple font-normal opacity-75">
                 Price
-              </th>
-              <th className="sm:col-span-1 lg:col-span-3 text-purple font-normal opacity-75 flex">
+              </div>
+              <div className="sm:col-span-1 lg:col-span-3 text-purple font-normal opacity-75 flex">
                 Balance
-              </th>
-            </tr>
-          </thead>
+              </div>
+            </div>
+          </div>
 
-          <tbody className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12 py-2">
-            <tr  className="grid sm:grid-cols-3 lg:grid-cols-12 items-center">
-              <td className="flex items-center gap-4 sm:col-span-2 base:col-span-1 lg:col-span-5 text-purple font-normal opacity-75">
+          <div className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12 py-2">
+            <div  className="grid sm:grid-cols-3 lg:grid-cols-12 items-center">
+              <div className="flex items-center gap-4 sm:col-span-2 base:col-span-1 lg:col-span-5 text-purple font-normal opacity-75">
                 {/*<div>🍌</div>*/}
                 <div className="flex flex-col">
                   <div className="text-small font-bold">ETH</div>
                   <div className="text-xsmall opacity-75">Ethereum</div>
                 </div>
-              </td>
-              <td className="sm:hidden base:block sm:col-span-1 lg:col-span-4 text-purple font-normal opacity-75 flex">
+              </div>
+              <div className="sm:hidden base:block sm:col-span-1 lg:col-span-4 text-purple font-normal opacity-75 flex">
                 <div className="font-bold">$1960.15</div>
                 <div className="text-xsmall opacity-75">(-%15.50)</div>
-              </td>
-              <td className="flex flex-col sm:col-span-1 lg:col-span-3 text-purple font-normal opacity-75">
+              </div>
+              <div className="flex flex-col sm:col-span-1 lg:col-span-3 text-purple font-normal opacity-75">
                 <div className="font-bold">1.5 ETH</div>
                 <div className="text-xsmall opacity-75">($2607.15)</div>
-              </td>
-            </tr>
-          </tbody>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </>

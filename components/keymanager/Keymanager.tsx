@@ -103,8 +103,12 @@ const Keymanager = () => {
     });
   };  
 
-  const test = () => {
-    console.log(changedPermissions)
+  const test =async() => {
+    const erc725 = new ERC725(LSP6Schema as ERC725JSONSchema[], address, 'https://rpc.testnet.lukso.gateway.fm');
+
+    // Array of controller addresses on given UP
+    const addressesWithPerm = await erc725.getData('AddressPermissions[]');
+    console.log("addressesWithPerm", addressesWithPerm);
   }
 
   const fetchControllersPermissions = async () => {
@@ -195,7 +199,7 @@ const Keymanager = () => {
     "Change Extensions",
     "Change Owner",
     "Change Universal Receiver Delegate",
-    "Decrypto",
+    "Decrypt",
     "Delegate Call",
     "Deploy",
     "Edit Permissions",
@@ -221,7 +225,7 @@ const Keymanager = () => {
   "CHANGEEXTENSIONS": "Change Extensions",
   "CHANGEOWNER": "Change Owner",
   "CHANGEUNIVERSALRECEIVERDELEGATE": "Change Universal Receiver Delegate",
-  "DECRYPT": "Decrypto",
+  "DECRYPT": "Decrypt",
   "DELEGATECALL": "Delegate Call",
   "DEPLOY": "Deploy",
   "EDITPERMISSIONS": "Edit Permissions",
@@ -299,22 +303,64 @@ const Keymanager = () => {
       return;
     }
 
-    /*const provider = new Web3(window.lukso);
+    const provider = new ethers.providers.Web3Provider(window.lukso);
 
-    // Schema Instance
+    console.log()
+    const signer = provider.getSigner();
+
     const erc725 = new ERC725(
       LSP6Schema as ERC725JSONSchema[],
       address,
-      provider,
+      'https://rpc.testnet.lukso.network'
     );
 
-    // UP Instance
-    const myUniversalProfile = new provider.eth.Contract(
-      UniversalProfile.abi,
-      address,
-    );*/
+    // Create an object with these keys, each set to true
+    const permissionsObject = selectedPermissions.reduce<PermissionsEncoded>((acc, permission) => {
+      acc[permission] = true;
+      return acc;
+    }, {});
+
+    console.log("permissionsObject", permissionsObject)
+
+    // Now encode the permissions using erc725.encodePermissions
+    const beneficiaryPermissions = erc725.encodePermissions(permissionsObject);
+
+    const addressPermissionsArray = await erc725.getData('AddressPermissions[]');
+    const controllers = addressPermissionsArray.value;
+    console.log("controllers", controllers)
+
+    if (!Array.isArray(controllers)) {
+      notify("Unexpected Error", NotificationType.Error);
+      throw new Error('Controllers is not an array');
+    }
+
+    const permissionData = erc725.encodeData([
+      // the permission of the beneficiary address
+      {
+        keyName: 'AddressPermissions:Permissions:<address>',
+        dynamicKeyParts: inputAddress,
+        value: beneficiaryPermissions,
+      },
+      // the new list controllers addresses (= addresses with permissions set on the UP)
+      // + the incremented `AddressPermissions[]` array length
+      {
+        keyName: 'AddressPermissions[]',
+        // @ts-ignore
+        value: [...controllers, inputAddress],
+      },
+    ]);
+
+    console.log("permissionData", permissionData)
+
+    //@ts-ignore
+    const myUniversalProfile = new ethers.Contract(address, UniversalProfile.abi, signer);
+
+    const tx = await myUniversalProfile.setDataBatch(permissionData.keys, permissionData.values);
+    const receipt = await tx.wait();
+    
+    console.log('Transaction receipt', receipt);
   }
-  
+
   return (
     <div className={`flex flex-col gap-6 h-full bg-white rounded-15 shadow px-6 py-8 ${addController ? 'animate-fade-out' : 'animate-fade-in'} transition`}>
       
@@ -400,38 +446,38 @@ const Keymanager = () => {
         </div>
         <PopupButton isVisible={arePermissionsChanged} onReset={handleReset} onConfirm={handleConfirm}/>
         <div className="flex flex-col w-full gap-2">
-          <thead className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12">
-            <tr className="flex w-full justify-between items-center">
-              <th className="text-purple font-bold flex opacity-75">
+          <div className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12">
+            <div className="flex w-full justify-between items-center">
+              <div className="text-purple font-bold flex opacity-75">
                 Controllers
-              </th>
-              <th className="text-purple font-bold flex opacity-75">
+              </div>
+              <div className="text-purple font-bold flex opacity-75">
                 Permissions
-              </th>
-            </tr>
-          </thead>
+              </div>
+            </div>
+          </div>
 
           {controllersPermissions.map((controller, index) => (
-            <tbody key={index} className="hidden sm:table-header-group grid grid-cols-12 border border-lightPurple border-opacity-25 rounded-15 py-2 px-4">
-              <tr  className="flex w-full justify-between items-center py-2">
-                <td className="flex items-center gap-4 sm:col-span-2 base:col-span-1 lg:col-span-5 text-purple font-normal">
-                  <td onClick={test} className="text-small font-bold">{formatAddress(controller.address)}</td>
-                </td>
-                <td className="sm:hidden base:block sm:col-span-1 lg:col-span-4 text-purple font-normal flex">
-                  <td onClick={() => {togglePermissionsDropdown(controller.address)}} className="font-bold text-xsmall transition hover:cursor-pointer">show more</td>
-                </td>
-              </tr> 
+            <div key={index} className="hidden sm:table-header-group grid grid-cols-12 border border-lightPurple border-opacity-25 rounded-15 py-2 px-4">
+              <div  className="flex w-full justify-between items-center py-2">
+                <div className="flex items-center gap-4 sm:col-span-2 base:col-span-1 lg:col-span-5 text-purple font-normal">
+                  <div onClick={test} className="text-small font-bold">{formatAddress(controller.address)}</div>
+                </div>
+                <div className="sm:hidden base:block sm:col-span-1 lg:col-span-4 text-purple font-normal flex">
+                  <div onClick={() => {togglePermissionsDropdown(controller.address)}} className="font-bold text-xsmall transition hover:cursor-pointer">show more</div>
+                </div>
+              </div> 
               {visibilityStates[controller.address] && (
-                <tr 
+                <div 
                   className={`flex w-full ${dropdownVisible[controller.address] ? 'animate-reveal' : 'animate-conceal'} transition gap-2 grid sm:grid-cols-1 keymanager:grid-cols-2 lg:grid-cols-3 text-xsmall overflow-y-auto hide-scrollbar`}
                   style={{ animationFillMode: 'forwards' }}
                 >
-                  <tr className="flex flex-col gap-4 py-2">
-                    <td className="font-bold text-purple">
+                  <div className="flex flex-col gap-4 py-2">
+                    <div className="font-bold text-purple">
                       Ownership
-                    </td>
-                    <td className="flex flex-col gap-4">
-                      <tr className="flex gap-[5px] items-center">
+                    </div>
+                    <div className="flex flex-col gap-4">
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch 
                           isToggled={controller.permissions.CHANGEOWNER}
                           onToggle={() => updatePermission(controller.address, 'CHANGEOWNER')} 
@@ -439,8 +485,8 @@ const Keymanager = () => {
                           permissionKey="CHANGEOWNER"
                         />
                         <span>Change Owner</span>
-                      </tr>
-                      <tr className="flex gap-[5px] items-center">
+                      </div>
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch
                           isToggled={controller.permissions.ADDCONTROLLER}
                           onToggle={() => updatePermission(controller.address, 'ADDCONTROLLER')} 
@@ -448,8 +494,8 @@ const Keymanager = () => {
                           permissionKey="ADDCONTROLLER"
                         />
                         <span>Add Controller</span>
-                      </tr>
-                      <tr className="flex gap-[5px] items-center">
+                      </div>
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch
                           isToggled={controller.permissions.EDITPERMISSIONS}
                           onToggle={() => updatePermission(controller.address, 'EDITPERMISSIONS')} 
@@ -457,15 +503,15 @@ const Keymanager = () => {
                           permissionKey="EDITPERMISSIONS"
                         />
                         <span>Edit Permissions</span>
-                      </tr>
-                    </td>
-                  </tr>
-                  <tr className="flex flex-col gap-4 py-2">
-                    <td className="font-bold text-purple">
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-4 py-2">
+                    <div className="font-bold text-purple">
                       Signature
-                    </td>
-                    <td className="flex flex-col gap-4">
-                      <tr className="flex gap-[5px] items-center">
+                    </div>
+                    <div className="flex flex-col gap-4">
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch
                           isToggled={controller.permissions.ENCRYPT}
                           onToggle={() => updatePermission(controller.address, 'ENCRYPT')} 
@@ -473,8 +519,8 @@ const Keymanager = () => {
                           permissionKey="ENCRYPT"
                         />
                         <span>Encrypt</span>
-                      </tr>
-                      <tr className="flex gap-[5px] items-center">
+                      </div>
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch
                           isToggled={controller.permissions.DECRYPT}
                           onToggle={() => updatePermission(controller.address, 'DECRYPT')} 
@@ -482,8 +528,8 @@ const Keymanager = () => {
                           permissionKey="DECRYPT"
                         />
                         <span>Decrypt</span>
-                      </tr>
-                      <tr className="flex gap-[5px] items-center">
+                      </div>
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch
                           isToggled={controller.permissions.SIGN}
                           onToggle={() => updatePermission(controller.address, 'SIGN')} 
@@ -491,15 +537,15 @@ const Keymanager = () => {
                           permissionKey="SIGN"
                         />
                         <span>Sign</span>
-                      </tr>
-                    </td>
-                  </tr>
-                  <tr className="flex flex-col gap-4 py-2">
-                    <td className="font-bold text-purple">
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-4 py-2">
+                    <div className="font-bold text-purple">
                       Asset Management
-                    </td>
-                    <td className="flex flex-col gap-4">
-                      <tr className="flex gap-[5px] items-center">
+                    </div>
+                    <div className="flex flex-col gap-4">
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch
                           isToggled={controller.permissions.SUPER_TRANSFERVALUE}
                           onToggle={() => updatePermission(controller.address, 'SUPER_TRANSFERVALUE')} 
@@ -507,8 +553,8 @@ const Keymanager = () => {
                           permissionKey="SUPER_TRANSFERVALUE"
                         />
                         <span>Super Transfer Value</span>
-                      </tr>
-                      <tr className="flex gap-[5px] items-center">
+                      </div>
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch
                           isToggled={controller.permissions.TRANSFERVALUE}
                           onToggle={() => updatePermission(controller.address, 'TRANSFERVALUE')} 
@@ -516,15 +562,15 @@ const Keymanager = () => {
                           permissionKey="TRANSFERVALUE"
                         />
                         <span>Transfer Value</span>
-                      </tr>
-                    </td>
-                  </tr>
-                  <tr className="flex flex-col gap-4 py-2">
-                    <td className="font-bold text-purple">
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-4 py-2">
+                    <div className="font-bold text-purple">
                       Calls
-                    </td>
-                    <td className="flex flex-col gap-4">
-                      <tr className="flex gap-[5px] items-center">
+                    </div>
+                    <div className="flex flex-col gap-4">
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch
                           isToggled={controller.permissions.SUPER_CALL}
                           onToggle={() => updatePermission(controller.address, 'SUPER_CALL')} 
@@ -532,8 +578,8 @@ const Keymanager = () => {
                           permissionKey="SUPER_CALL"
                         />
                         <span>Super Call</span>
-                      </tr>
-                      <tr className="flex gap-[5px] items-center">
+                      </div>
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch
                           isToggled={controller.permissions.CALL}
                           onToggle={() => updatePermission(controller.address, 'CALL')} 
@@ -541,8 +587,8 @@ const Keymanager = () => {
                           permissionKey="CALL"
                         />
                         <span>Call</span>
-                      </tr>
-                      <tr className="flex gap-[5px] items-center">
+                      </div>
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch
                           isToggled={controller.permissions.SUPER_STATICCALL}
                           onToggle={() => updatePermission(controller.address, 'SUPER_STATICCALL')} 
@@ -550,8 +596,8 @@ const Keymanager = () => {
                           permissionKey="SUPER_STATICCALL"
                         />
                         <span>Super Static Call</span>
-                      </tr>
-                      <tr className="flex gap-[5px] items-center">
+                      </div>
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch
                           isToggled={controller.permissions.STATICCALL}
                           onToggle={() => updatePermission(controller.address, 'STATICCALL')} 
@@ -559,8 +605,8 @@ const Keymanager = () => {
                           permissionKey="STATICCALL"
                         />
                         <span>Static Call</span>
-                      </tr>
-                      <tr className="flex gap-[5px] items-center">
+                      </div>
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch
                           isToggled={controller.permissions.SUPER_DELEGATECALL}
                           onToggle={() => updatePermission(controller.address, 'SUPER_DELEGATECALL')} 
@@ -568,8 +614,8 @@ const Keymanager = () => {
                           permissionKey="SUPER_DELEGATECALL"
                         />
                         <span>Super Delegate Call</span>
-                      </tr>
-                      <tr className="flex gap-[5px] items-center">
+                      </div>
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch
                           isToggled={controller.permissions.DELEGATECALL}
                           onToggle={() => updatePermission(controller.address, 'DELEGATECALL')} 
@@ -577,15 +623,15 @@ const Keymanager = () => {
                           permissionKey="DELEGATECALL"
                         />
                         <span>Delegate Call</span>
-                      </tr>
-                    </td>
-                  </tr>
-                  <tr className="flex flex-col gap-4 py-2 keymanager:mt-[-150px] lg:mt-0">
-                    <td className="font-bold text-purple">
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-4 py-2 keymanager:mt-[-150px] lg:mt-0">
+                    <div className="font-bold text-purple">
                       Extensions
-                    </td>
-                    <td className="flex flex-col gap-4">
-                      <tr className="flex gap-[5px] items-center">
+                    </div>
+                    <div className="flex flex-col gap-4">
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch
                           isToggled={controller.permissions.ADDEXTENSIONS}
                           onToggle={() => updatePermission(controller.address, 'ADDEXTENSIONS')} 
@@ -593,8 +639,8 @@ const Keymanager = () => {
                           permissionKey="ADDEXTENSIONS"
                         />
                         <span>Add Extensions</span>
-                      </tr>
-                      <tr className="flex gap-[5px] items-center">
+                      </div>
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch
                           isToggled={controller.permissions.CHANGEEXTENSIONS}
                           onToggle={() => updatePermission(controller.address, 'CHANGEEXTENSIONS')} 
@@ -602,8 +648,8 @@ const Keymanager = () => {
                           permissionKey="CHANGEEXTENSIONS"
                         />
                         <span>Change Extensions</span>
-                      </tr>
-                      <tr className="flex gap-[5px] items-center">
+                      </div>
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch
                           isToggled={controller.permissions.ADDUNIVERSALRECEIVERDELEGATE}
                           onToggle={() => updatePermission(controller.address, 'ADDUNIVERSALRECEIVERDELEGATE')} 
@@ -611,8 +657,8 @@ const Keymanager = () => {
                           permissionKey="ADDUNIVERSALRECEIVERDELEGATE"
                         />
                         <span>Add URD</span>
-                      </tr>
-                      <tr className="flex gap-[5px] items-center">
+                      </div>
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch
                           isToggled={controller.permissions.CHANGEUNIVERSALRECEIVERDELEGATE}
                           onToggle={() => updatePermission(controller.address, 'CHANGEUNIVERSALRECEIVERDELEGATE')} 
@@ -620,15 +666,15 @@ const Keymanager = () => {
                           permissionKey="CHANGEUNIVERSALRECEIVERDELEGATE"
                         />
                         <span>Change URD</span>
-                      </tr>
-                    </td>
-                  </tr>
-                  <tr className="flex flex-col gap-4 py-2  md:mt-0">
-                    <td className="font-bold text-purple">
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-4 py-2  md:mt-0">
+                    <div className="font-bold text-purple">
                       Relay & Execution
-                    </td>
-                    <td className="flex flex-col gap-4">
-                      <tr className="flex gap-[5px] items-center">
+                    </div>
+                    <div className="flex flex-col gap-4">
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch
                           isToggled={controller.permissions.EXECUTE_RELAY_CALL}
                           onToggle={() => updatePermission(controller.address, 'EXECUTE_RELAY_CALL')} 
@@ -636,15 +682,15 @@ const Keymanager = () => {
                           permissionKey="EXECUTE_RELAY_CALL"
                         />
                         <span>Execute Relay Call</span>
-                      </tr>
-                    </td>
-                  </tr>
-                  <tr className="flex flex-col gap-4 py-2 keymanager:mt-[-20px] lg:mt-0">
-                    <td className="font-bold text-purple">
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-4 py-2 keymanager:mt-[-20px] lg:mt-0">
+                    <div className="font-bold text-purple">
                       Contract Management
-                    </td>
-                    <td className="flex flex-col gap-4">
-                      <tr className="flex gap-[5px] items-center">
+                    </div>
+                    <div className="flex flex-col gap-4">
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch
                           isToggled={controller.permissions.DEPLOY}
                           onToggle={() => updatePermission(controller.address, 'DEPLOY')} 
@@ -652,8 +698,8 @@ const Keymanager = () => {
                           permissionKey="DEPLOY"
                         />
                         <span>Deploy</span>
-                      </tr>
-                      <tr className="flex gap-[5px] items-center">
+                      </div>
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch
                           isToggled={controller.permissions.SUPER_SETDATA}
                           onToggle={() => updatePermission(controller.address, 'SUPER_SETDATA')} 
@@ -661,8 +707,8 @@ const Keymanager = () => {
                           permissionKey="SUPER_SETDATA"
                         />
                         <span>Super Set Data</span>
-                      </tr>
-                      <tr className="flex gap-[5px] items-center">
+                      </div>
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch
                           isToggled={controller.permissions.SETDATA}
                           onToggle={() => updatePermission(controller.address, 'SETDATA')} 
@@ -670,16 +716,16 @@ const Keymanager = () => {
                           permissionKey="SETDATA"
                         />
                         <span>Set Data</span>
-                      </tr>
-                    </td>
-                  </tr>
+                      </div>
+                    </div>
+                  </div>
                   
-                  <tr className="flex flex-col gap-4 py-2 base:grid-row-6">
-                    <td className="font-bold text-purple">
+                  <div className="flex flex-col gap-4 py-2 base:grid-row-6">
+                    <div className="font-bold text-purple">
                       Safety
-                    </td>
-                    <td className="flex flex-col gap-4">
-                      <tr className="flex gap-[5px] items-center">
+                    </div>
+                    <div className="flex flex-col gap-4">
+                      <div className="flex gap-[5px] items-center">
                         <ToggleSwitch
                           isToggled={controller.permissions.REENTRANCY}
                           onToggle={() => updatePermission(controller.address, 'REENTRANCY')} 
@@ -687,12 +733,12 @@ const Keymanager = () => {
                           permissionKey="REENTRANCY"
                         />
                         <span>Reentrancy</span>
-                      </tr>
-                    </td>
-                  </tr>
-                </tr>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
-            </tbody>
+            </div>
           ))}
         </div>
       </>
