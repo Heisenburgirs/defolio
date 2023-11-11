@@ -55,6 +55,16 @@ const config: Config = {
           '0%': { maxHeight: '1500px' },
           '100%': { maxHeight: '0' },
         },
+
+        // Keymanager Add Controller
+        fadeIn: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' }
+        },
+        fadeOut: {
+          '0%': { opacity: '0' },
+          '100%': { opacity: '1' }
+        }
       },
       
       animation: {
@@ -65,6 +75,10 @@ const config: Config = {
         // Keymanager dropdown animation
         'reveal': 'reveal 0.5s ease-in-out forwards',
         'conceal': 'conceal 0.5s ease-in-out forwards',
+
+        // Keymanager Add Controller
+        'fade-in': 'fadeIn 0.2s ease-in-out forwards',
+        'fade-out': 'fadeOut 0.2s ease-in-out forwards'
       },
     },
     colors: {

@@ -1,4 +1,4 @@
-export const Test = ({ isVisible, onReset, onConfirm } : { isVisible: boolean, onReset: () => void, onConfirm: () => void }) => {
+export const PopupButton = ({ isVisible, onReset, onConfirm } : { isVisible: boolean, onReset: () => void, onConfirm: () => void }) => {
   const visibilityClass = isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4';
   const transitionClass = 'transition ease-in-out duration-500';
 

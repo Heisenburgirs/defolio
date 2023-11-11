@@ -56,14 +56,6 @@ declare global {
   }
 
   // Toast
-  enum NotificationType {
-    Success,
-    Error,
-    Warning,
-    Info,
-    Default,
-  }
-
   interface NotificationProviderProps {
     children: ReactNode;
   }
@@ -139,6 +131,8 @@ declare global {
     [key: string]: boolean;
   };
   
+  // Permissions Menu Items
+  type PermissionKey = keyof typeof permissionMapping;
 }
 
 // Export to satisfy the TypeScript compiler

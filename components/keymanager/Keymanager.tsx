@@ -1,14 +1,25 @@
 import React, { useState, useEffect } from 'react';
+import Image from 'next/image'
 import '../../app/globals.css'
 import LSP6Schema from '@erc725/erc725.js/schemas/LSP6KeyManager.json';
 import ERC725, { ERC725JSONSchema } from '@erc725/erc725.js';
 import { useAccount } from 'wagmi';
 import { ToggleSwitch } from '../toggle/Toggle';
-import { Test } from '../popupButton/PopupButton';
+import { PopupButton } from '../popupButton/PopupButton';
+import { formatAddress, isValidEthereumAddress } from '@/app/utils/useDraggableScroll';
+import { ethers } from 'ethers';
+import UniversalProfile from '@lukso/lsp-smart-contracts/artifacts/UniversalProfile.json';
+
+import lightPurpleArrow from '@/public/icons/lightPurple_arrow.png';
+import purpleArrow from '@/public/icons/purple_arrow.png';
+import { notify, NotificationType } from '../toast/Toast';
+import Web3 from 'web3';
 
 const Keymanager = () => {
   const { address } = useAccount()
+  const [hover, setHover] = useState(false);
 
+  // Manage controllers
   const [visibilityStates, setVisibilityStates] = useState<VisibilityState>({});
   const [dropdownVisible, setDropdownVisible] = useState<Record<string, boolean>>({});
 
@@ -175,18 +186,226 @@ const Keymanager = () => {
     console.log("Permissions changed");
   };
 
+  // Dynamic render of permissions
+  const menuItems: string[] = [
+    "Add Controller",
+    "Add Extensions",
+    "Add Universal Receiver Delegate",
+    "Call",
+    "Change Extensions",
+    "Change Owner",
+    "Change Universal Receiver Delegate",
+    "Decrypto",
+    "Delegate Call",
+    "Deploy",
+    "Edit Permissions",
+    "Ecnrypt",
+    "Eexecute Relay Call",
+    "Reentrancy",
+    "Set Data",
+    "Sign",
+    "Static Call",
+    "Super Call",
+    "Super Delegate Call",
+    "Super Set Data",
+    "Super Static Call",
+    "Super Transfer Value",
+    "Transfer Value"
+  ];
+
+  const permissionMapping = {
+  "ADDCONTROLLER": "Add Controller",
+  "ADDEXTENSIONS": "Add Extensions",
+  "ADDUNIVERSALRECEIVERDELEGATE": "Add Universal Receiver Delegate",
+  "CALL": "Call",
+  "CHANGEEXTENSIONS": "Change Extensions",
+  "CHANGEOWNER": "Change Owner",
+  "CHANGEUNIVERSALRECEIVERDELEGATE": "Change Universal Receiver Delegate",
+  "DECRYPT": "Decrypto",
+  "DELEGATECALL": "Delegate Call",
+  "DEPLOY": "Deploy",
+  "EDITPERMISSIONS": "Edit Permissions",
+  "ENCRYPT": "Ecnrypt",
+  "EXECUTE_RELAY_CALL": "Eexecute Relay Call",
+  "REENTRANCY": "Reentrancy",
+  "SETDATA": "Set Data",
+  "SIGN": "Sign",
+  "STATICCALL": "Static Call",
+  "SUPER_CALL": "Super Call",
+  "SUPER_DELEGATECALL": "Super Delegate Call",
+  "SUPER_SETDATA": "Super Set Data",
+  "SUPER_STATICCALL": "Super Static Call",
+  "SUPER_TRANSFERVALUE": "Super Transfer Value",
+  "TRANSFERVALUE": "Transfer Value",
+  };
+
+
+  const chunkSizes: number[] = [4, 4, 5, 5, 3, 2];
+
+  const dynamicChunkArray = (array: string[], sizes: number[]): string[][] => {
+    let index = 0;
+    return sizes.map((size) => {
+      const chunk = array.slice(index, index + size);
+      index += size;
+      return chunk;
+    });
+  };
+
+  const chunkedMenuItems = dynamicChunkArray(menuItems, chunkSizes);
+  
+  type PermissionKey = keyof typeof permissionMapping;
+
+  const selectPermissions = (permission: string) => {
+    setSelectedPermissions(prevSelected => {
+      // Find the key in permissionMapping that corresponds to the selected permission
+      const permissionKey = Object.keys(permissionMapping).find(key => permissionMapping[key as PermissionKey] === permission) as PermissionKey | undefined;
+  
+      if (!permissionKey) {
+        // If there is no corresponding key, return the previous state
+        return prevSelected;
+      }
+  
+      if (prevSelected.includes(permissionKey)) {
+        // Remove the key if it's already selected
+        return prevSelected.filter(item => item !== permissionKey);
+      } else {
+        // Add the key if it's not already selected
+        return [...prevSelected, permissionKey];
+      }
+    });
+  };
+  
+  // Add New Controller
+  const [addController, setAddController] = useState<boolean>(false);
+  const [hasProvidedAddress, setHasProvidedAddress] = useState<boolean>(false);
+  const [inputAddress, setInputAddress] = useState('');
+  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([])
+  const isSelected = true
+  
+
+  const addNewController = async () => {
+    
+    console.log(selectedPermissions)
+    // Check if the input address is already a controller
+    const isAlreadyController = controllersPermissions.some(controller => controller.address === inputAddress);
+
+    if (isAlreadyController) {
+      notify("Address Already Controller", NotificationType.Error)
+      return;
+    }
+
+    if (selectedPermissions.length === 0) {
+      notify("Select Permission", NotificationType.Error)
+      return;
+    }
+
+    /*const provider = new Web3(window.lukso);
+
+    // Schema Instance
+    const erc725 = new ERC725(
+      LSP6Schema as ERC725JSONSchema[],
+      address,
+      provider,
+    );
+
+    // UP Instance
+    const myUniversalProfile = new provider.eth.Contract(
+      UniversalProfile.abi,
+      address,
+    );*/
+  }
   
   return (
-    
-      <div className="flex h-full bg-white rounded-15 shadow px-6 py-8">
-        <Test isVisible={arePermissionsChanged} onReset={handleReset} onConfirm={handleConfirm}/>
+    <div className={`flex flex-col gap-6 h-full bg-white rounded-15 shadow px-6 py-8 ${addController ? 'animate-fade-out' : 'animate-fade-in'} transition`}>
+      
+      {addController ? (
+        <>
+          <div
+            className="flex gap-2 px-4 items-center text-lightPurple hover:text-purple hover:cursor-pointer transition text-small"
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+            onClick={() => {setAddController(false)}}
+          >
+            <div 
+              className="transition ease-in-out duration-200"
+            >
+              <Image 
+                src={hover ? purpleArrow : lightPurpleArrow} 
+                width={24} 
+                height={24} 
+                alt="Back"
+                className="hover:cursor-pointer"
+              />
+            </div>
+            <div>Back</div>
+          </div>
+          <div className="flex flex-col py-6 px-16 gap-16 justify-center items-center">
+            <div className="flex flex-col gap-4 justify-center items-center">
+              <div className="text-purple font-bold text-medium">Add New Controller</div>
+              <div className="text-lightPurple text-medium">Choose permissions you wish this controller to have on your Universal Profile</div>
+            </div>
+            <input 
+              type="text" 
+              placeholder="Enter address..." 
+              className="px-4 py-2 w-[500px] border border-lightPurple rounded-15 focus:outline-purple"
+              onChange={(e) => { setInputAddress(e.target.value); setHasProvidedAddress(isValidEthereumAddress(e.target.value));}}
+            />
+            <div className="flex w-full flex-col gap-4 items-center justify-center">
+              {chunkedMenuItems.map((chunk, chunkIndex) => (
+                <div key={chunkIndex} className="flex gap-2">
+                  {chunk.map((item, itemIndex) => {
+                    // Find the key in permissionMapping that corresponds to the display value
+                    const permissionKey = Object.keys(permissionMapping).find(key => permissionMapping[key as PermissionKey] === item);
+
+                    // Check if this key is in the selectedPermissions array
+                    const isSelected = permissionKey && selectedPermissions.includes(permissionKey as PermissionKey);
+
+                    return (
+                      <div 
+                        key={itemIndex} 
+                        className={`py-2 px-4 border border-lightPurple hover:bg-purple hover:text-white hover:cursor-pointer rounded-15 text-xsmall transition ${isSelected ? "bg-purple text-white opacity-100" : "text-lightPurple"}`}
+                        onClick={() => selectPermissions(item)}
+                      >
+                        {item}
+                      </div>
+                    );
+                  })}
+                </div>
+              ))}
+            </div>
+            <button 
+              className={
+                `py-2 px-6 bg-lightPurple bg-opacity-75 text-medium rounded-15 text-white transition
+                ${hasProvidedAddress ? 'bg-purple bg-opacity-100' : 'cursor-not-allowed opacity-50'}`
+              }
+              onClick={addNewController}
+              disabled={!hasProvidedAddress}
+            >
+              Finalize Controller
+            </button>
+          </div>
+        </>
+      )
+      :
+      (
+      <>
+        <div className="flex w-full justify-between items-center">
+          <div className="flex flex-col gap-2">
+            <div className="text-medium font-bold text-purple">Controller Permissions</div>
+            <div className="sm:text-xsmall md:text-small text-purple opacity-90">Remove, add and manage controller permissions</div>
+          </div>
+          <div onClick={() => {setAddController(true)}} className="py-2 px-4 rounded-15 text-xsmall border border-lightPurple text-purple font-bold hover:cursor-pointer hover:bg-purple hover:text-white transition">
+            Add Controller
+          </div>
+        </div>
+        <PopupButton isVisible={arePermissionsChanged} onReset={handleReset} onConfirm={handleConfirm}/>
         <div className="flex flex-col w-full gap-2">
           <thead className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12">
             <tr className="flex w-full justify-between items-center">
-              <th className="text-purple font-bold flex">
+              <th className="text-purple font-bold flex opacity-75">
                 Controllers
               </th>
-              <th className="text-purple font-bold flex">
+              <th className="text-purple font-bold flex opacity-75">
                 Permissions
               </th>
             </tr>
@@ -196,10 +415,10 @@ const Keymanager = () => {
             <tbody key={index} className="hidden sm:table-header-group grid grid-cols-12 border border-lightPurple border-opacity-25 rounded-15 py-2 px-4">
               <tr  className="flex w-full justify-between items-center py-2">
                 <td className="flex items-center gap-4 sm:col-span-2 base:col-span-1 lg:col-span-5 text-purple font-normal">
-                  <td onClick={test} className="text-small font-bold">{controller.address}</td>
+                  <td onClick={test} className="text-small font-bold">{formatAddress(controller.address)}</td>
                 </td>
-                <td className="sm:hidden base:block sm:col-span-1 lg:col-span-4 text-purple font-normal opacity-75 flex">
-                  <td onClick={() => {togglePermissionsDropdown(controller.address)}} className="font-bold text-xsmall opacity-90 hover:opacity-100 transition hover:cursor-pointer">show more</td>
+                <td className="sm:hidden base:block sm:col-span-1 lg:col-span-4 text-purple font-normal flex">
+                  <td onClick={() => {togglePermissionsDropdown(controller.address)}} className="font-bold text-xsmall transition hover:cursor-pointer">show more</td>
                 </td>
               </tr> 
               {visibilityStates[controller.address] && (
@@ -476,7 +695,9 @@ const Keymanager = () => {
             </tbody>
           ))}
         </div>
-      </div>
+      </>
+      )}
+    </div>
   );
 };
 
