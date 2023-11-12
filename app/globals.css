@@ -50,3 +50,38 @@ body {
 .hide-scrollbar::-webkit-scrollbar { 
   display: none;  /* Safari and Chrome */
 }
+
+// Three dot loading animation
+.loading {
+  align-items: center;
+  display: flex;
+  justify-content: center;
+  height: 100%;
+  position: fixed;
+  width: 100%;
+  border-radius: 15px;
+}
+
+.loading__dot {
+  animation: dot ease-in-out 1s infinite;
+  background-color: #8993d1;
+  border-radius: 50px;
+  display: inline-block;
+  height: 20px;
+  margin: 5px;
+  width: 20px;
+}
+
+.loading__dot:nth-of-type(2) {
+  animation-delay: 0.2s;
+}
+
+.loading__dot:nth-of-type(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes dot {
+  0% { background-color: #8993d1; transform: scale(0.5); }
+  50% { background-color: #8993d1; transform: scale(0.7); }
+  100% { background-color: #8993d1; transform: scale(0.5); }
+}

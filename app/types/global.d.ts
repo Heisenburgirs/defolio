@@ -78,14 +78,16 @@ declare global {
   }
 
   // Token Table
-  type TableRow = {
-    Name: string[];
-    Symbol: string[];
-    Price: string[];
-    Change24: string[];
-    TokenAmount: string[];
-    TokenValue: string[];
+  type TokenRow = {
+    Address: string;
+    Name: string;
+    Symbol: string;
+    Price: string;
+    TokenAmount: string;
+    TokenValue: string;
   };
+  
+  type TokenBalances = TokenRow[];
 
   // Controller Permissions
   interface Permissions {
