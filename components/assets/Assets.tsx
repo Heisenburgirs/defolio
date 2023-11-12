@@ -21,6 +21,7 @@ const Assets = () => {
   const { data, isError } = useBalance({
     address: address,
   })
+
   const { currencyData, error, loading } = useCurrencyData();
 
   const [noTokenBalance, setNoTokenBalance] = useState<boolean>(false)
@@ -170,6 +171,14 @@ const Assets = () => {
   // LSP7 Token Balances
   const [tokenBalances, setTokenBalances] = useState<TokenBalances>([])
   
+  // Search query
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const filteredTokens = tokenBalances.filter(token => 
+    token.Name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    token.Symbol.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
   // Currency Dropdown
   const handleCurrencySelect = (currency: CurrencyOption) => {
     setSelectedCurrency(currency);
@@ -223,7 +232,7 @@ const Assets = () => {
         />
 
         <div className="flex sm:flex-col base:flex-row sm:items-left md:items-center base:justify-between md:justify-none gap-4" >
-          <SearchBar placeholder="Search for a token..." />
+          <SearchBar placeholder="Search for a token..." onSearch={value => setSearchQuery(value)}  />
           <CurrencyDropdown
             selectedCurrency={selectedCurrency}
             onSelect={handleCurrencySelect}
@@ -264,7 +273,7 @@ const Assets = () => {
             :
             (
               isConnected &&
-              tokenBalances.map((token, index) => (
+              filteredTokens.map((token, index) => (
                 <div key={index} className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12 py-2">
                   <div className="grid sm:grid-cols-3 lg:grid-cols-12 items-center">
                     <div className="flex items-center gap-4 sm:col-span-2 base:col-span-1 lg:col-span-5 text-purple font-normal opacity-75">

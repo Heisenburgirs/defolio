@@ -53,6 +53,7 @@ declare global {
   // SearchBar
   interface SearchBarProps {
     placeholder: string;
+    onSearch: (searchValue: string) => void;
   }
 
   // Toast
