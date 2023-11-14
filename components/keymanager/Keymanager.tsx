@@ -6,18 +6,22 @@ import ERC725, { ERC725JSONSchema } from '@erc725/erc725.js';
 import { useAccount } from 'wagmi';
 import { ToggleSwitch } from '../toggle/Toggle';
 import { PopupButton } from '../popupButton/PopupButton';
-import { formatAddress, isValidEthereumAddress } from '@/app/utils/useDraggableScroll';
+import { formatAddress } from '@/app/utils/useFormatAddress';
+import { isValidEthereumAddress } from '@/app/utils/useIsValidEthereumAddress';
 import { ethers } from 'ethers';
 import UniversalProfile from '@lukso/lsp-smart-contracts/artifacts/UniversalProfile.json';
 
 import lightPurpleArrow from '@/public/icons/lightPurple_arrow.png';
 import purpleArrow from '@/public/icons/purple_arrow.png';
 import { notify, NotificationType } from '../toast/Toast';
-import Web3 from 'web3';
+import TransactionModal from '../modal/TransactionModal';
 
 const Keymanager = () => {
-  const { address } = useAccount()
+  const { address, isConnected } = useAccount()
   const [hover, setHover] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAdditionInitiated, setIsAdditionInitiated] = useState(false);
+  const [transactionStep, setTransactionStep] = useState(1);
 
   // Manage controllers
   const [visibilityStates, setVisibilityStates] = useState<VisibilityState>({});
@@ -25,23 +29,23 @@ const Keymanager = () => {
 
   const togglePermissionsDropdown = (controllerAddress: string) => {
     if (visibilityStates[controllerAddress]) {
-      // If dropdown is currently open, start closing animation
-      setDropdownVisible(prev => ({ ...prev, [controllerAddress]: false }));
+        // Start closing animation immediately
+        setDropdownVisible(prev => ({ ...prev, [controllerAddress]: false }));
 
-      // Delay hiding the dropdown until animation completes
-      setTimeout(() => {
-        setVisibilityStates(prevStates => ({
-          ...prevStates,
-          [controllerAddress]: false
-        }));
-      }, 500); // 500ms matches the duration of the 'conceal' animation
+        // Delay hiding the dropdown until animation completes
+        setTimeout(() => {
+            setVisibilityStates(prevStates => ({
+                ...prevStates,
+                [controllerAddress]: false
+            }));
+        }, 500); // 500ms matches the duration of the 'conceal' animation
     } else {
-      // Open dropdown immediately and start opening animation
-      setVisibilityStates(prevStates => ({
-        ...prevStates,
-        [controllerAddress]: true
-      }));
-      setDropdownVisible(prev => ({ ...prev, [controllerAddress]: true }));
+        // Open dropdown immediately and start opening animation
+        setVisibilityStates(prevStates => ({
+            ...prevStates,
+            [controllerAddress]: true
+        }));
+        setDropdownVisible(prev => ({ ...prev, [controllerAddress]: true }));
     }
   };
 
@@ -104,14 +108,10 @@ const Keymanager = () => {
   };  
 
   const test =async() => {
-    const erc725 = new ERC725(LSP6Schema as ERC725JSONSchema[], address, 'https://rpc.testnet.lukso.gateway.fm');
-
-    // Array of controller addresses on given UP
-    const addressesWithPerm = await erc725.getData('AddressPermissions[]');
-    console.log("addressesWithPerm", addressesWithPerm);
   }
 
   const fetchControllersPermissions = async () => {
+    setIsLoading(true)
     const erc725 = new ERC725(LSP6Schema as ERC725JSONSchema[], address, 'https://rpc.testnet.lukso.gateway.fm');
 
     // Array of controller addresses on given UP
@@ -141,11 +141,14 @@ const Keymanager = () => {
 
     setControllersPermissions(newControllersPermissions);
     setChangedPermissions([]);
+    setIsLoading(false)
   }
 
   // Fetch controllers & their permissions
   useEffect(() => {
-    fetchControllersPermissions();
+    if (isConnected) {
+      fetchControllersPermissions();
+    }
   }, [address]);
 
   
@@ -186,8 +189,10 @@ const Keymanager = () => {
     );
   };
 
+  // Existing Controller Permissions
   const handleConfirm = () => {
     console.log("Permissions changed");
+
   };
 
   // Dynamic render of permissions
@@ -284,12 +289,9 @@ const Keymanager = () => {
   const [hasProvidedAddress, setHasProvidedAddress] = useState<boolean>(false);
   const [inputAddress, setInputAddress] = useState('');
   const [selectedPermissions, setSelectedPermissions] = useState<string[]>([])
-  const isSelected = true
   
-
   const addNewController = async () => {
-    
-    console.log(selectedPermissions)
+
     // Check if the input address is already a controller
     const isAlreadyController = controllersPermissions.some(controller => controller.address === inputAddress);
 
@@ -303,9 +305,9 @@ const Keymanager = () => {
       return;
     }
 
-    const provider = new ethers.providers.Web3Provider(window.lukso);
+    setIsAdditionInitiated(true)
 
-    console.log()
+    const provider = new ethers.providers.Web3Provider(window.lukso);
     const signer = provider.getSigner();
 
     const erc725 = new ERC725(
@@ -350,87 +352,126 @@ const Keymanager = () => {
       },
     ]);
 
-    console.log("permissionData", permissionData)
-
     //@ts-ignore
     const myUniversalProfile = new ethers.Contract(address, UniversalProfile.abi, signer);
 
-    const tx = await myUniversalProfile.setDataBatch(permissionData.keys, permissionData.values);
-    const receipt = await tx.wait();
-    
-    console.log('Transaction receipt', receipt);
+    try {
+      const tx = await myUniversalProfile.setDataBatch(permissionData.keys, permissionData.values);
+      setTransactionStep(2)
+
+      const receipt = await tx.wait();
+      setTransactionStep(3)
+      setSelectedPermissions([''])
+
+    } catch (err) {
+      // First, check if err is an object and has a 'code' property
+      if (typeof err === 'object' && err !== null && 'code' in err) {
+        // Now TypeScript knows err is an object and has a 'code' property
+        const errorCode = (err as { code: unknown }).code;
+        if (errorCode === 4001) {
+          // Handle user's rejection
+          console.log("User declined the transaction");
+          notify("Signature Declined", NotificationType.Error);
+          setIsAdditionInitiated(false)
+          setSelectedPermissions([''])
+        } else {
+          // Handle other errors
+          console.log("ERROR SETTING CONTROLLER", err);
+          setIsAdditionInitiated(true)
+          notify("Error Setting Controller", NotificationType.Error);
+          setTransactionStep(4);
+          setSelectedPermissions([''])
+        }
+      } else {
+        // Handle the case where err is not an object or doesn't have 'code'
+        console.log("An unexpected error occurred", err);
+        setSelectedPermissions([''])
+        setTransactionStep(4);
+      }
+    }
   }
 
   return (
     <div className={`flex flex-col gap-6 h-full bg-white rounded-15 shadow px-6 py-8 ${addController ? 'animate-fade-out' : 'animate-fade-in'} transition`}>
       
       {addController ? (
-        <>
-          <div
-            className="flex gap-2 px-4 items-center text-lightPurple hover:text-purple hover:cursor-pointer transition text-small"
-            onMouseEnter={() => setHover(true)}
-            onMouseLeave={() => setHover(false)}
-            onClick={() => {setAddController(false)}}
-          >
-            <div 
-              className="transition ease-in-out duration-200"
+        isAdditionInitiated ? (
+          <TransactionModal
+            successMsg='Controller Successfuly Set'
+            onBackButtonClick={() => {setAddController(false)}} 
+            transactionStep={transactionStep}
+            setTransactionStep={setTransactionStep}
+          />
+        )
+        :
+        (
+          <>
+            <div
+              className="flex gap-2 px-4 items-center text-lightPurple hover:text-purple hover:cursor-pointer transition text-small"
+              onMouseEnter={() => setHover(true)}
+              onMouseLeave={() => setHover(false)}
+              onClick={() => {setAddController(false)}}
             >
-              <Image 
-                src={hover ? purpleArrow : lightPurpleArrow} 
-                width={24} 
-                height={24} 
-                alt="Back"
-                className="hover:cursor-pointer"
+              <div 
+                className="transition ease-in-out duration-200"
+              >
+                <Image 
+                  src={hover ? purpleArrow : lightPurpleArrow} 
+                  width={24} 
+                  height={24} 
+                  alt="Back"
+                  className="hover:cursor-pointer"
+                />
+              </div>
+              <div>Back</div>
+            </div>
+            <div className="flex flex-col py-6 px-16 gap-16 justify-center items-center">
+              <div className="flex flex-col gap-4 justify-center items-center">
+                <div className="text-purple font-bold text-medium">Add New Controller</div>
+                <div className="text-lightPurple text-medium">Choose permissions you wish this controller to have on your Universal Profile</div>
+              </div>
+              <input 
+                type="text" 
+                placeholder="Enter address..." 
+                className="px-4 py-2 w-[500px] border border-lightPurple rounded-15 focus:outline-purple"
+                onChange={(e) => { setInputAddress(e.target.value); setHasProvidedAddress(isValidEthereumAddress(e.target.value));}}
               />
+              <div className="flex w-full flex-col gap-4 items-center justify-center">
+                {chunkedMenuItems.map((chunk, chunkIndex) => (
+                  <div key={chunkIndex} className="flex gap-2">
+                    {chunk.map((item, itemIndex) => {
+                      // Find the key in permissionMapping that corresponds to the display value
+                      const permissionKey = Object.keys(permissionMapping).find(key => permissionMapping[key as PermissionKey] === item);
+  
+                      // Check if this key is in the selectedPermissions array
+                      const isSelected = permissionKey && selectedPermissions.includes(permissionKey as PermissionKey);
+  
+                      return (
+                        <div 
+                          key={itemIndex} 
+                          className={`py-2 px-4 border border-lightPurple hover:bg-purple hover:text-white hover:cursor-pointer rounded-15 text-xsmall transition ${isSelected ? "bg-purple text-white opacity-100" : "text-lightPurple"}`}
+                          onClick={() => selectPermissions(item)}
+                        >
+                          {item}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))}
+              </div>
+              <button 
+                className={
+                  `py-2 px-6 bg-lightPurple bg-opacity-75 text-medium rounded-15 text-white transition
+                  ${hasProvidedAddress ? 'bg-purple bg-opacity-100' : 'cursor-not-allowed opacity-50'}`
+                }
+                onClick={addNewController}
+                disabled={!hasProvidedAddress}
+              >
+                Finalize Controller
+              </button>
             </div>
-            <div>Back</div>
-          </div>
-          <div className="flex flex-col py-6 px-16 gap-16 justify-center items-center">
-            <div className="flex flex-col gap-4 justify-center items-center">
-              <div className="text-purple font-bold text-medium">Add New Controller</div>
-              <div className="text-lightPurple text-medium">Choose permissions you wish this controller to have on your Universal Profile</div>
-            </div>
-            <input 
-              type="text" 
-              placeholder="Enter address..." 
-              className="px-4 py-2 w-[500px] border border-lightPurple rounded-15 focus:outline-purple"
-              onChange={(e) => { setInputAddress(e.target.value); setHasProvidedAddress(isValidEthereumAddress(e.target.value));}}
-            />
-            <div className="flex w-full flex-col gap-4 items-center justify-center">
-              {chunkedMenuItems.map((chunk, chunkIndex) => (
-                <div key={chunkIndex} className="flex gap-2">
-                  {chunk.map((item, itemIndex) => {
-                    // Find the key in permissionMapping that corresponds to the display value
-                    const permissionKey = Object.keys(permissionMapping).find(key => permissionMapping[key as PermissionKey] === item);
-
-                    // Check if this key is in the selectedPermissions array
-                    const isSelected = permissionKey && selectedPermissions.includes(permissionKey as PermissionKey);
-
-                    return (
-                      <div 
-                        key={itemIndex} 
-                        className={`py-2 px-4 border border-lightPurple hover:bg-purple hover:text-white hover:cursor-pointer rounded-15 text-xsmall transition ${isSelected ? "bg-purple text-white opacity-100" : "text-lightPurple"}`}
-                        onClick={() => selectPermissions(item)}
-                      >
-                        {item}
-                      </div>
-                    );
-                  })}
-                </div>
-              ))}
-            </div>
-            <button 
-              className={
-                `py-2 px-6 bg-lightPurple bg-opacity-75 text-medium rounded-15 text-white transition
-                ${hasProvidedAddress ? 'bg-purple bg-opacity-100' : 'cursor-not-allowed opacity-50'}`
-              }
-              onClick={addNewController}
-              disabled={!hasProvidedAddress}
-            >
-              Finalize Controller
-            </button>
-          </div>
-        </>
+          </>
+        )
       )
       :
       (
@@ -440,7 +481,7 @@ const Keymanager = () => {
             <div className="text-medium font-bold text-purple">Controller Permissions</div>
             <div className="sm:text-xsmall md:text-small text-purple opacity-90">Remove, add and manage controller permissions</div>
           </div>
-          <div onClick={() => {setAddController(true)}} className="py-2 px-4 rounded-15 text-xsmall border border-lightPurple text-purple font-bold hover:cursor-pointer hover:bg-purple hover:text-white transition">
+          <div onClick={() => { if (isConnected) setAddController(true) }}  className="py-2 px-4 rounded-15 text-xsmall border border-lightPurple text-purple font-bold hover:cursor-pointer hover:bg-purple hover:text-white transition">
             Add Controller
           </div>
         </div>
@@ -457,7 +498,16 @@ const Keymanager = () => {
             </div>
           </div>
 
-          {controllersPermissions.map((controller, index) => (
+        {isLoading ? (
+          <div className="loading opacity-75 w-full flex justify-center items-center p-16">
+            <span className="loading__dot"></span>
+            <span className="loading__dot"></span>
+            <span className="loading__dot"></span>
+          </div>
+        )
+        :
+        (
+          controllersPermissions.map((controller, index) => (
             <div key={index} className="hidden sm:table-header-group grid grid-cols-12 border border-lightPurple border-opacity-25 rounded-15 py-2 px-4">
               <div  className="flex w-full justify-between items-center py-2">
                 <div className="flex items-center gap-4 sm:col-span-2 base:col-span-1 lg:col-span-5 text-purple font-normal">
@@ -739,7 +789,10 @@ const Keymanager = () => {
                 </div>
               )}
             </div>
-          ))}
+          ))
+
+        )}
+          
         </div>
       </>
       )}

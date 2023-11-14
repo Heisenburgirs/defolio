@@ -6,8 +6,14 @@ export const PopupButton = ({ isVisible, onReset, onConfirm } : { isVisible: boo
     <div className={`fixed bottom-0 right-0 z-50 flex w-auto h-auto py-8 px-8 ${visibilityClass} ${transitionClass}`}>
         <div className="flex flex-col gap-4 py-4 px-8 bg-white rounded-15 border-4 border-double border-lightPurple">
         <span className="font-bold opacity-75 text-purple">
-          Permissions Changed!
+          Permissions Changed For:
         </span>
+        <div>
+          0x3g...215 >
+        </div>
+        <div>
+          0x3g...215
+        </div>
         <div className="flex gap-4 items-center justify-between">
           <button
             className="py-1 px-4 rounded-10 border border-Lightpurple text-lightPurple hover:bg-purple hover:text-white hover:cursor-pointer transition"

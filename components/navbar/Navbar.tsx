@@ -19,7 +19,7 @@ const MenuItem = ({ itemName, selectedMenuItem, menuSelection }: MenuItemProps) 
   const isSelected = selectedMenuItem === itemName;
   const baseClasses = "min-w-[150px] lg:text-left rounded-15 flex sm:items-center sm:justify-center lg:items-left lg:justify-start lg sm:py-2 lg:py-4 px-6 cursor-pointer transition";
   const textClass = isSelected ? "text-white" : "text-purple hover:text-white";
-  const bgClass = isSelected ? "bg-purple" : "hover:bg-lightPurple";
+  const bgClass = isSelected ? "bg-lightPurple" : "hover:bg-lightPurple";
   
   return (
     <li

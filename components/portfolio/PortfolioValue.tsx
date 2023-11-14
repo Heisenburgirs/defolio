@@ -9,8 +9,7 @@ const currencySymbols: { [key: string]: string } = {
   GBP: '£', // British Pound
 };
 
-const PortfolioValue: React.FC<PortfolioValueProps> = ({ balance, currencySymbol }) => {
-  const [balanceVisible, setBalanceVisible] = useState<boolean>(true);
+const PortfolioValue: React.FC<PortfolioValueProps> = ({ balance, currencySymbol, balanceVisible, setBalanceVisible }) => {
   const symbol = currencySymbols[currencySymbol] || '';
 
   return (

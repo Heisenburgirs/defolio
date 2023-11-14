@@ -45,10 +45,12 @@ declare global {
     symbol: keyof typeof convertedBalances;
   };
 
-  type PortfolioValueProps = {
+  interface PortfolioValueProps {
     balance: number;
     currencySymbol: string;
-  };
+    balanceVisible: boolean;
+    setBalanceVisible: (visible: boolean) => void;
+  }
 
   // SearchBar
   interface SearchBarProps {

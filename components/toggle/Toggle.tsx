@@ -5,11 +5,9 @@ export const ToggleSwitch: React.FC<ToggleSwitchProps> = ({ isToggled, onToggle,
 
   return (
     <div onClick={onToggle} className="relative inline-block w-10 mr-2 align-middle select-none transition duration-200 ease-in">
-      <input
-        type="checkbox"
-        name="toggle"
+      <div
         id={toggleId}
-        checked={isToggled}
+        onChange={onToggle}
         className="toggle-checkbox absolute block rounded-15 w-5 h-5 rounded-full bg-white appearance-none cursor-pointer"
         style={{ top: '2px', left: isToggled ? '26px' : '2px', transition: 'left 0.2s' }}
       />
