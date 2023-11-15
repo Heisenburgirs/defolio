@@ -18,7 +18,7 @@ interface AssetsState {
 }
 
 const initialState: AssetsState = {
-  isLoading: true,
+  isLoading: false,
   convertedBalances: { USD: 0, GBP: 0, EUR: 0 },
   convertedLYXPrice: { USD: 0, GBP: 0, EUR: 0 },
   tokenBalances: [],
@@ -31,7 +31,7 @@ interface AssetsProviderProps {
 }
 
 export const AssetsProvider: React.FC<AssetsProviderProps> = ({ children }) => {
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [convertedBalances, setConvertedBalances] = useState<{ USD: number; GBP: number; EUR: number }>({USD: 0, GBP: 0, EUR: 0,});
   const [convertedLYXPrice, setConvertedLYXPrice] = useState<{ USD: number; GBP: number; EUR: number }>({USD: 0, GBP: 0, EUR: 0,});
   const [tokenBalances, setTokenBalances] = useState<TokenBalances>([]);

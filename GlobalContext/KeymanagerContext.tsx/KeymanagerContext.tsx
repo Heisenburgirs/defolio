@@ -15,7 +15,7 @@ interface KeymanagerState {
 const initialState: KeymanagerState = {
   controllersPermissions: [],
   changedPermissions: [],
-  isLoading: true,
+  isLoading: false,
   setControllersPermissions: () => {},
   setChangedPermissions: () => {},
 };
@@ -29,7 +29,7 @@ interface AssetsProviderProps {
 export const KeymanagerProvider: React.FC<AssetsProviderProps> = ({ children }) => {
   const { address, isConnected } = useAccount()
 
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Existing permissions for given addresses
   const [controllersPermissions, setControllersPermissions] = useState<ControllerPermission[]>([]);

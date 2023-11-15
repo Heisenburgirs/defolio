@@ -143,7 +143,7 @@ const Assets = () => {
             </div>
           </div>
 
-          {noTokenBalance ? (
+          {!isConnected ? (
             <div className="flex items-center justify-center py-8 text-lightPurple text-small">No assets</div>
           )
           :

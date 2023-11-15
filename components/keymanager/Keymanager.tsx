@@ -380,15 +380,15 @@ const Keymanager = () => {
               </div>
               <div>Back</div>
             </div>
-            <div className="flex flex-col py-6 px-16 gap-16 justify-center items-center">
+            <div className="flex flex-col py-6 sm:px-2 lg:px-16 gap-16 justify-center items-center">
               <div className="flex flex-col gap-4 justify-center items-center">
                 <div className="text-purple font-bold text-medium">Add New Controller</div>
-                <div className="text-lightPurple text-medium">Choose permissions you wish this controller to have on your Universal Profile</div>
+                <div className="text-lightPurple text-medium text-center">Choose permissions you wish this controller to have on your Universal Profile</div>
               </div>
               <input 
                 type="text" 
                 placeholder="Enter address..." 
-                className="px-4 py-2 w-[500px] border border-lightPurple rounded-15 focus:outline-purple"
+                className="px-4 py-2 sm:w-[200px] base:w-[350px] md:w-[500px] border border-lightPurple rounded-15 focus:outline-purple"
                 onChange={(e) => { setInputAddress(e.target.value); setHasProvidedAddress(isValidEthereumAddress(e.target.value));}}
               />
               <div className="flex w-full flex-col gap-4 items-center justify-center">
