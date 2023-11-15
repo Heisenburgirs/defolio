@@ -10,9 +10,12 @@ import { LSPFactory } from '@lukso/lsp-factory.js';
 import { ethers } from 'ethers';
 import { useAccount, usePublicClient } from 'wagmi';
 import LSP7Mintable from "@lukso/lsp-smart-contracts/artifacts/LSP7Mintable.json";
+import LSP8Mintable from "@lukso/lsp-smart-contracts/artifacts/LSP8Mintable.json";
 import { copyToClipboard } from '@/app/utils/useCopyToCliptboard';
 import { NotificationType, notify } from '../toast/Toast';
 import { useAssets } from '@/GlobalContext/AssetsContext.tsx/AssetsContext';
+import { numberToBytes32 } from '@/app/utils/useBytes32';
+import TokenType from '../tokentype/TokenType';
 
 const Assets = () => {
   const { address, isConnected } = useAccount()
@@ -23,6 +26,7 @@ const Assets = () => {
 
   const [noTokenBalance, setNoTokenBalance] = useState<boolean>(false)
   const [isDropdownVisible, setIsDropdownVisible] = useState<number | null>(null);
+  const [tokenType, setTokenType] = useState<string>("LSP7")
 
   const currencySymbols: { [key: string]: string } = {
     USD: '$', // United States Dollar
@@ -35,7 +39,12 @@ const Assets = () => {
   // Search query
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredTokens = tokenBalances.filter(token => 
+  const filteredLSP7Tokens = tokenBalances.LSP7.filter(token => 
+    token.Name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    token.Symbol.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredLSP8Tokens = tokenBalances.LSP8.filter(token => 
     token.Name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     token.Symbol.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -46,9 +55,9 @@ const Assets = () => {
   };
 
   /* FUNCTIONS LSP7 */
-
   const publicClient = usePublicClient()
-  const provider = async () => {
+
+  const deployLsp7 = async () => {
     console.log(publicClient)
     console.log("address, address", address)
 
@@ -66,6 +75,38 @@ const Assets = () => {
     });
 
     console.log(myContracts)
+  }
+
+  const deployLsp8 = async () => {
+    console.log(publicClient)
+    console.log("address, address", address)
+
+    const provider = new ethers.providers.Web3Provider(window.lukso);
+    const signer = provider.getSigner();
+    const lspFactory = new LSPFactory(provider, {
+      chainId: 4201,
+    });
+
+    const myContracts = await lspFactory.LSP8IdentifiableDigitalAsset.deploy({
+      tokenIdType: 1,
+      controllerAddress: await signer.getAddress() || "",
+      name: 'FIRST LSP8',
+      symbol: 'LSP8',
+    });
+
+    console.log(myContracts)
+  }
+
+  const mintLsp8 = async () => {
+    const provider = new ethers.providers.Web3Provider(window.lukso);
+    const signer = provider.getSigner();
+    const contract = "0xF845f0d71232c92854AcF90f813fBd38727912DE";
+
+    const myContract = new ethers.Contract(contract, LSP8Mintable.abi, signer);
+
+    const tx = await myContract.mint(address, numberToBytes32(1), false, '0x');
+
+    console.log("result", tx)
   }
 
   const mint = async () => {
@@ -91,6 +132,10 @@ const Assets = () => {
         setIsDropdownVisible(index); // Open if a different index is clicked
     }
   };
+
+  const test = () => {
+    console.log(tokenBalances)
+  }
   
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
@@ -123,9 +168,15 @@ const Assets = () => {
           />
         </div>
       </div>
+      <div className="flex">
+        <TokenType tokenType={tokenType} setTokenType={setTokenType} />
+      </div>
       <div className="flex h-full bg-white rounded-15 shadow px-6 py-8">
-        {/*<div onClick={provider}>tets</div>
-        <div onClick={mint}>Mint</div>*/}
+        {/*<div className="flex flex-col">
+        <div onClick={deployLsp8}>tets</div>
+        <div onClick={mintLsp8}>Mint</div>
+        <div onClick={test}>testestestes</div>
+        </div>*/}
 
         <div className="flex flex-col w-full gap-2">
           <div className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12">
@@ -144,7 +195,7 @@ const Assets = () => {
           </div>
 
           {!isConnected ? (
-            <div className="flex items-center justify-center py-8 text-lightPurple text-small">No assets</div>
+            <div className="flex items-center justify-center py-8 text-lightPurple text-small">Connect to see assets</div>
           )
           :
           (
@@ -158,7 +209,7 @@ const Assets = () => {
             :
             (
               isConnected &&
-              filteredTokens.map((token, index) => (
+              (tokenType === "LSP7" ? filteredLSP7Tokens : filteredLSP8Tokens).map((token, index) => (
                 <div key={index} className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12 py-2">
                   <div className="grid sm:grid-cols-4 lg:grid-cols-12 items-center">
                     <div className="flex items-center gap-4 sm:col-span-2 base:col-span-1 lg:col-span-4 text-purple font-normal opacity-75">
@@ -194,7 +245,7 @@ const Assets = () => {
                         </div>
                         <div className="flex gap-4 justify-center items-center">
                           <Image src={externalLink} width={18} height={18} alt="Copy Token Address" />
-                          <a href={`https://explorer.execution.testnet.lukso.network/tx/${token.Address}`} target="_blank" onClick={() => {handleDropdownClick(index)}} className="text-xsmall text-lightPurple">View on block explorer</a>
+                          <a href={`https://explorer.execution.testnet.lukso.network/address/${token.Address}`} target="_blank" onClick={() => {handleDropdownClick(index)}} className="text-xsmall text-lightPurple">View on block explorer</a>
                         </div>
                       </div>
                       }

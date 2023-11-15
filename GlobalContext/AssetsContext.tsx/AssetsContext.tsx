@@ -21,9 +21,11 @@ const initialState: AssetsState = {
   isLoading: false,
   convertedBalances: { USD: 0, GBP: 0, EUR: 0 },
   convertedLYXPrice: { USD: 0, GBP: 0, EUR: 0 },
-  tokenBalances: [],
-};
-
+  tokenBalances: {
+    LSP7: [],
+    LSP8: []
+  },
+}
 const AssetsContext = createContext(initialState);
 
 interface AssetsProviderProps {
@@ -34,7 +36,7 @@ export const AssetsProvider: React.FC<AssetsProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [convertedBalances, setConvertedBalances] = useState<{ USD: number; GBP: number; EUR: number }>({USD: 0, GBP: 0, EUR: 0,});
   const [convertedLYXPrice, setConvertedLYXPrice] = useState<{ USD: number; GBP: number; EUR: number }>({USD: 0, GBP: 0, EUR: 0,});
-  const [tokenBalances, setTokenBalances] = useState<TokenBalances>([]);
+  const [tokenBalances, setTokenBalances] = useState<TokenBalances>({ LSP7: [], LSP8: [] });
 
   const { address, isConnected, isDisconnected } = useAccount()
   
@@ -85,12 +87,12 @@ export const AssetsProvider: React.FC<AssetsProviderProps> = ({ children }) => {
         if (Array.isArray(receivedAssetsDataKey.value)) {
 
           const contractAddress = receivedAssetsDataKey.value
-          console.log("contractAddress", contractAddress);
 
           // Assuming receivedAssetsDataKey.value is an array of contract addresses
           const contractAddresses = receivedAssetsDataKey.value;
 
           const lsp7Holdings = [];
+          const lsp8Holdings = [];
 
           for (const contractAddress of contractAddresses) {
             const myerc725 = new ERC725(LSP4Schema as ERC725JSONSchema[], contractAddress, "https://rpc.testnet.lukso.gateway.fm/", {
@@ -98,57 +100,96 @@ export const AssetsProvider: React.FC<AssetsProviderProps> = ({ children }) => {
             });
 
             const web3 = new Web3("https://rpc.testnet.lukso.network");
-            const lsp7Contract = new web3.eth.Contract(
+            const lspContract = new web3.eth.Contract(
               LSP7DigitalAsset.abi as any,
               contractAddress
             );
 
             // Fetching balance for the given user address (replace with actual user address)
             // @ts-ignore
-            const balance = await lsp7Contract.methods.balanceOf(address).call();
+            const balance = await lspContract.methods.balanceOf(address).call();
 
             // Fetching token name and symbol
             const digitalAssetMetadataSymbol = await myerc725.fetchData('LSP4TokenSymbol');
             const digitalAssetMetadataName = await myerc725.fetchData('LSP4TokenName');
 
-            // Storing the fetched data in an object and adding it to the lsp7Holdings array
-            lsp7Holdings.push({
-              contractAddress: contractAddress,
-              name: digitalAssetMetadataName.value,
-              symbol: digitalAssetMetadataSymbol.value,
-              balance: balance
-            });
+            try {
+              const decimals = await lspContract.methods.decimals().call();
+
+              // @ts-ignore returns 18n (bigNumber) for some reason giving type error
+              const decimalsStr = decimals.toString();
+              
+              // @ts-ignore
+              if (decimalsStr === "18") {
+                lsp7Holdings.push({
+                  contractAddress: contractAddress,
+                  name: digitalAssetMetadataName.value,
+                  symbol: digitalAssetMetadataSymbol.value,
+                  balance: balance
+                });
+              } else if (decimalsStr === "1") {
+                lsp7Holdings.push({
+                  contractAddress: contractAddress,
+                  name: digitalAssetMetadataName.value,
+                  symbol: digitalAssetMetadataSymbol.value,
+                  balance: balance
+                });
+              }
+            } catch (error) {
+              // In case contract doesn't have decimals, we see if it ha balanceOf.
+              // If it does, it's LSP8
+              // @ts-ignore
+              const balanceOf = await lspContract.methods.balanceOf("0x2BA81117D5fBD087eCF65bC719D0473cb0566Abc").call();
+
+              // @ts-ignore
+              const balanceOfStr = balanceOf.toString()
+
+              if (balanceOfStr >= "0") {
+                lsp8Holdings.push({
+                  Address: contractAddress,
+                  Name: typeof digitalAssetMetadataName.value === 'string' ? digitalAssetMetadataName.value : 'Unknown Token',
+                  Symbol: typeof digitalAssetMetadataSymbol.value === 'string' ? digitalAssetMetadataSymbol.value : 'Unknown Symbol',
+                  Price: '',
+                  //@ts-ignore same void whathever bullshit
+                  TokenAmount: balance.toString(),
+                  TokenValue: '',
+                });
+              }
+            }
           }
 
-          const modifiedTokenBalances = [
-            // First, add the lyxToken object
-            {
-              Address: '0x',
-              Name: 'Lukso',
-              Symbol: 'LYX',
-              Price: lyxPrice.toString(),
-              Change24: "15",
-              TokenAmount: balanceValue.toString(),
-              TokenValue: totalPriceLYX.toString()
-            },
-            // Then, spread the results of the map over lsp7Holdings
-            ...lsp7Holdings.map(token => {
-              let tokenAmount = '0';
-              if (token.balance) {
-                tokenAmount = ethers.utils.formatEther(token.balance.toString());
-              }
-            
-              return {
-                Address: token.contractAddress,
-                Name: typeof token.name === 'string' ? token.name : 'Unknown Token Name',
-                Symbol: typeof token.symbol === 'string' ? token.symbol : 'Unknown Symbol',
-                Price: '', // Leave empty for now
-                Change24: '',
-                TokenAmount: tokenAmount,
-                TokenValue: '' // Leave empty for now
-              };
-            })
-          ];
+          const modifiedTokenBalances: TokenBalances = {
+            LSP7: [
+              // Add the LYX token object first
+              {
+                Address: '0x',
+                Name: 'Lukso',
+                Symbol: 'LYX',
+                Price: lyxPrice.toString(),
+                Change24: "15",
+                TokenAmount: balanceValue.toString(),
+                TokenValue: totalPriceLYX.toString()
+              },
+              // Then, add LSP7 holdings
+              ...lsp7Holdings.map(token => {
+                let tokenAmount = '0';
+                if (token.balance) {
+                  tokenAmount = ethers.utils.formatEther(token.balance.toString());
+                }
+                
+                return {
+                  Address: token.contractAddress,
+                  Name: typeof token.symbol === 'string' ? token.symbol : 'Unknown Symbol',
+                  Symbol: typeof token.symbol === 'string' ? token.symbol : 'Unknown Symbol',
+                  Price: '', // Leave empty for now
+                  Change24: '',
+                  TokenAmount: tokenAmount,
+                  TokenValue: '' // Leave empty for now
+                };
+              })
+            ],
+            LSP8: lsp8Holdings // Add LSP8 holdings
+          };
           
           setTokenBalances(modifiedTokenBalances);
           setIsLoading(false)

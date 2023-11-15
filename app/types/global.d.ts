@@ -90,7 +90,10 @@ declare global {
     TokenValue: string;
   };
   
-  type TokenBalances = TokenRow[];
+  interface TokenBalances {
+    LSP7: TokenRow[];
+    LSP8: TokenRow[];
+  }
 
   // Controller Permissions
   interface Permissions {
@@ -142,6 +145,12 @@ declare global {
   interface PermissionsEncoded {
     [key: string]: boolean;
   }
+
+  // Tokentype selector
+  type TokenTypeProps = {
+    tokenType: TokenType;
+    setTokenType: React.Dispatch<React.SetStateAction<TokenType>>;
+  };
 }
 
 // Export to satisfy the TypeScript compiler

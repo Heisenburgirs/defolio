@@ -154,11 +154,9 @@ const Keymanager = () => {
   const menuItems: string[] = [
     "Add Controller",
     "Add Extensions",
-    "Add Universal Receiver Delegate",
     "Call",
     "Change Extensions",
     "Change Owner",
-    "Change Universal Receiver Delegate",
     "Decrypt",
     "Delegate Call",
     "Deploy",
@@ -174,7 +172,9 @@ const Keymanager = () => {
     "Super Set Data",
     "Super Static Call",
     "Super Transfer Value",
-    "Transfer Value"
+    "Transfer Value",
+    "Add Universal Receiver Delegate",
+    "Change Universal Receiver Delegate",
   ];
 
   const permissionMapping = {
@@ -203,14 +203,42 @@ const Keymanager = () => {
   "TRANSFERVALUE": "Transfer Value",
   };
 
+  const chunkSizeOptions = [[4, 4, 5, 5, 3, 2], [3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]];
 
-  const chunkSizes: number[] = [4, 4, 5, 5, 3, 2];
+  const getChunkSizesForScreenSize = () => {
+    console.log(window.innerWidth)
+
+    if (window.innerWidth <= 500) {
+      return chunkSizeOptions[2]
+    } else if (window.innerWidth <= 768) {
+      return chunkSizeOptions[1]
+    } else if (window.innerWidth <= 2920) {
+      return chunkSizeOptions[0]
+    }
+
+    return chunkSizeOptions[0]
+  };
+
+  const [chunkSizes, setChunkSizes] = useState(getChunkSizesForScreenSize());
+
+  useEffect(() => {
+    const handleResize = () => {
+      setChunkSizes(getChunkSizesForScreenSize());
+    };
+
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [window.innerWidth]);
 
   const dynamicChunkArray = (array: string[], sizes: number[]): string[][] => {
     let index = 0;
     return sizes.map((size) => {
       const chunk = array.slice(index, index + size);
       index += size;
+      console.log(chunk)
       return chunk;
     });
   };

@@ -15,6 +15,7 @@ const Transfer = () => {
   const { address, isConnected } = useAccount();
   const { tokenBalances } = useAssets()
   const menuItems = ["Send", "Receive"];
+  const [tokenType, setTokenType] = useState<string>("LSP7")
 
   const [menuSelected, setMenuSelected] = useState<string>("Send");
   const [everythingFilled, setEverythingFilled] = useState<boolean>(false);
@@ -27,7 +28,12 @@ const Transfer = () => {
   const [dropDownToken, setDropDownToken] = useState<string>("");
   const [searchQuery, setSearchQuery] = useState('');
   
-  const filteredTokens = tokenBalances.filter(token => 
+  const filteredLSP7Tokens = tokenBalances.LSP7.filter(token => 
+    token.Name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+    token.Symbol.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const filteredLSP8Tokens = tokenBalances.LSP8.filter(token => 
     token.Name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     token.Symbol.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -89,12 +95,12 @@ const Transfer = () => {
                                 <div className="hover:cursor-pointer" onClick={() => {setIsDropDownOpen(false)}}>X</div>
                               </div>
                               <div className="flex flex-col md:flex-row justify-between gap-4">
-                                <TokenType />
+                                <TokenType tokenType={tokenType} setTokenType={setTokenType} />
                                 <SearchBar placeholder="search tokens..." onSearch={value => setSearchQuery(value)} />
                               </div>
                               <div className="flex flex-col gap-2 h-[400px] overflow-y-auto">
                                 {
-                                  filteredTokens.map((token, index) => (
+                                  (tokenType === "LSP7" ? filteredLSP7Tokens : filteredLSP8Tokens).map((token, index) => (
                                     <div 
                                       key={index}
                                       className="flex cursor-pointer px-2 py-4 transition border-b border-lightPurple border-opacity-25" 
