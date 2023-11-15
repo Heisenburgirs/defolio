@@ -16,6 +16,7 @@ import { Chain, configureChains, createConfig, WagmiConfig } from 'wagmi';
 import { publicProvider } from 'wagmi/providers/public';
 import { InjectedConnector } from 'wagmi/connectors/injected'
 import { jsonRpcProvider } from 'wagmi/providers/jsonRpc'
+import GlobalWrapper from '@/GlobalContext/GlobalWrapper';
 
 // Lukso chain configuration
 const LUKSO_TESTNET: Chain = {
@@ -138,9 +139,11 @@ export default function RootLayout({ children, session }: RootLayoutProps) {
           <RainbowKitProvider chains={chains} theme={customTheme}>
             <ToastProvider>
               <CurrencyDataProvider>
-                <Header />
-                {children}
-                <Footer />
+                <GlobalWrapper>
+                  <Header />
+                  {children}
+                  <Footer />
+                </GlobalWrapper>
               </CurrencyDataProvider>
             </ToastProvider>
           </RainbowKitProvider>

@@ -12,6 +12,7 @@ import Assets from '@/components/assets/Assets'
 
 // Keymanaber
 import Keymanager from '@/components/keymanager/Keymanager'
+import Transfer from '@/components/transfer/Transfer';
 
 // Navbar Menu
 const menuItems = ["Assets", "Key Manager", "Guardians", "Session Keys", "Inheritance", "Carbon", "Send & Receive", "Bridge"];
@@ -55,6 +56,10 @@ export default function Portfolio() {
         {
           selectedMenuItem == "Key Manager" && 
           <Keymanager />
+        }
+        {
+          selectedMenuItem == "Send & Receive" && 
+          <Transfer />
         }
       </section>
     </main>

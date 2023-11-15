@@ -15,13 +15,15 @@ import lightPurpleArrow from '@/public/icons/lightPurple_arrow.png';
 import purpleArrow from '@/public/icons/purple_arrow.png';
 import { notify, NotificationType } from '../toast/Toast';
 import TransactionModal from '../modal/TransactionModal';
+import { useKeymanager } from '@/GlobalContext/KeymanagerContext.tsx/KeymanagerContext';
 
 const Keymanager = () => {
   const { address, isConnected } = useAccount()
   const [hover, setHover] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
   const [isAdditionInitiated, setIsAdditionInitiated] = useState(false);
   const [transactionStep, setTransactionStep] = useState(1);
+
+  const {controllersPermissions, changedPermissions, isLoading, setControllersPermissions, setChangedPermissions} = useKeymanager()
 
   // Manage controllers
   const [visibilityStates, setVisibilityStates] = useState<VisibilityState>({});
@@ -48,11 +50,6 @@ const Keymanager = () => {
         setDropdownVisible(prev => ({ ...prev, [controllerAddress]: true }));
     }
   };
-
-  // Existing permissions for given addresses
-  const [controllersPermissions, setControllersPermissions] = useState<ControllerPermission[]>([]);
-  // Adjusted permissions for given addresses
-  const [changedPermissions, setChangedPermissions] = useState<Array<{ address: string, changed: string[] }>>([]);
 
   const updatePermission = (controllerAddress: string, permissionKey: string) => {
     setControllersPermissions(currentPermissions =>
@@ -109,48 +106,6 @@ const Keymanager = () => {
 
   const test =async() => {
   }
-
-  const fetchControllersPermissions = async () => {
-    setIsLoading(true)
-    const erc725 = new ERC725(LSP6Schema as ERC725JSONSchema[], address, 'https://rpc.testnet.lukso.gateway.fm');
-
-    // Array of controller addresses on given UP
-    const addressesWithPerm = await erc725.getData('AddressPermissions[]');
-    console.log("addressesWithPerm", addressesWithPerm);
-    
-    const existingControllers = Array.isArray(addressesWithPerm.value) ? addressesWithPerm.value : [];
-
-    const newControllersPermissions = [];
-
-    for (const controllerAddress of existingControllers) {
-      const addressPermission = await erc725.getData({
-        keyName: 'AddressPermissions:Permissions:<address>',
-        dynamicKeyParts: controllerAddress,
-      });
-  
-      if (addressPermission && typeof addressPermission.value === 'string') {
-        const decodedPermission = erc725.decodePermissions(addressPermission.value);
-        newControllersPermissions.push({ 
-          address: controllerAddress, 
-          permissions: decodedPermission 
-        });
-      } else {
-        console.error(`addressPermission.value for ${controllerAddress} is not a string or is null`);
-      }
-    }
-
-    setControllersPermissions(newControllersPermissions);
-    setChangedPermissions([]);
-    setIsLoading(false)
-  }
-
-  // Fetch controllers & their permissions
-  useEffect(() => {
-    if (isConnected) {
-      fetchControllersPermissions();
-    }
-  }, [address]);
-
   
   const [arePermissionsChanged, setArePermissionsChanged] = useState(false)
 
