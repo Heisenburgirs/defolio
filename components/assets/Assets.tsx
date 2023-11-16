@@ -104,7 +104,7 @@ const Assets = () => {
 
     const myContract = new ethers.Contract(contract, LSP8Mintable.abi, signer);
 
-    const tx = await myContract.mint(address, numberToBytes32(1), false, '0x');
+    const tx = await myContract.mint(address, numberToBytes32(2), false, '0x');
 
     console.log("result", tx)
   }

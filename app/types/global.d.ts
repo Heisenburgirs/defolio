@@ -88,6 +88,7 @@ declare global {
     Price: string;
     TokenAmount: string;
     TokenValue: string;
+    TokenID: string[];
   };
   
   interface TokenBalances {

@@ -6,8 +6,10 @@ import { ERC725, ERC725JSONSchema } from '@erc725/erc725.js';
 import lsp3ProfileSchema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.json' assert { type: 'json' };
 import LSP4Schema from '@erc725/erc725.js/schemas/LSP4DigitalAsset.json';
 import LSP7DigitalAsset from '@lukso/lsp-smart-contracts/artifacts/LSP7DigitalAsset.json'
+import LSP8DigitalAsset from '@lukso/lsp-smart-contracts/artifacts/LSP8IdentifiableDigitalAsset.json';
 import { Web3 } from 'web3';
 import { ethers } from 'ethers';
+import { bytes32ToNumber } from '@/app/utils/useBytes32';
 
 // AssetsState Interface
 interface AssetsState {
@@ -100,21 +102,26 @@ export const AssetsProvider: React.FC<AssetsProviderProps> = ({ children }) => {
             });
 
             const web3 = new Web3("https://rpc.testnet.lukso.network");
-            const lspContract = new web3.eth.Contract(
+            const lsp7Contract = new web3.eth.Contract(
               LSP7DigitalAsset.abi as any,
+              contractAddress
+            );
+
+            const lsp8Contract = new web3.eth.Contract(
+              LSP8DigitalAsset.abi as any,
               contractAddress
             );
 
             // Fetching balance for the given user address (replace with actual user address)
             // @ts-ignore
-            const balance = await lspContract.methods.balanceOf(address).call();
+            const balance = await lsp7Contract.methods.balanceOf(address).call();
 
             // Fetching token name and symbol
             const digitalAssetMetadataSymbol = await myerc725.fetchData('LSP4TokenSymbol');
             const digitalAssetMetadataName = await myerc725.fetchData('LSP4TokenName');
 
             try {
-              const decimals = await lspContract.methods.decimals().call();
+              const decimals = await lsp7Contract.methods.decimals().call();
 
               // @ts-ignore returns 18n (bigNumber) for some reason giving type error
               const decimalsStr = decimals.toString();
@@ -135,25 +142,41 @@ export const AssetsProvider: React.FC<AssetsProviderProps> = ({ children }) => {
                   balance: balance
                 });
               }
-            } catch (error) {
-              // In case contract doesn't have decimals, we see if it ha balanceOf.
-              // If it does, it's LSP8
-              // @ts-ignore
-              const balanceOf = await lspContract.methods.balanceOf("0x2BA81117D5fBD087eCF65bC719D0473cb0566Abc").call();
-
-              // @ts-ignore
-              const balanceOfStr = balanceOf.toString()
-
-              if (balanceOfStr >= "0") {
-                lsp8Holdings.push({
-                  Address: contractAddress,
-                  Name: typeof digitalAssetMetadataName.value === 'string' ? digitalAssetMetadataName.value : 'Unknown Token',
-                  Symbol: typeof digitalAssetMetadataSymbol.value === 'string' ? digitalAssetMetadataSymbol.value : 'Unknown Symbol',
-                  Price: '',
-                  //@ts-ignore same void whathever bullshit
-                  TokenAmount: balance.toString(),
-                  TokenValue: '',
-                });
+            } catch (err) {
+              try {
+                // In case contract doesn't have decimals, we see if it ha balanceOf.
+                // If it does, it's LSP8
+                // @ts-ignore
+                const balanceOf = await lsp8Contract.methods.balanceOf(address).call();
+  
+                // @ts-ignore
+                const balanceOfStr = balanceOf.toString()
+  
+                // Set tokenID
+                // @ts-ignore
+                const tokenIdsBytes32 = await lsp8Contract.methods.tokenIdsOf(address).call();
+  
+                //console.log("tokenIdsBytes32", tokenIdsBytes32)
+                
+                // @ts-ignore
+                const tokenIds = tokenIdsBytes32.map(bytes32 => bytes32ToNumber(bytes32).toString());
+  
+                //console.log("tokenIds", tokenIds);
+  
+                if (balanceOfStr >= "0") {
+                  lsp8Holdings.push({
+                    Address: contractAddress,
+                    Name: typeof digitalAssetMetadataName.value === 'string' ? digitalAssetMetadataName.value : 'Unknown Token',
+                    Symbol: typeof digitalAssetMetadataSymbol.value === 'string' ? digitalAssetMetadataSymbol.value : 'Unknown Symbol',
+                    Price: '',
+                    //@ts-ignore same void whathever bullshit
+                    TokenAmount: balance.toString(),
+                    TokenValue: '',
+                    TokenID: tokenIds
+                  });
+                }
+              } catch (err) {
+                console.log("ERROR FETCHING ASSETS")
               }
             }
           }
@@ -168,7 +191,8 @@ export const AssetsProvider: React.FC<AssetsProviderProps> = ({ children }) => {
                 Price: lyxPrice.toString(),
                 Change24: "15",
                 TokenAmount: balanceValue.toString(),
-                TokenValue: totalPriceLYX.toString()
+                TokenValue: totalPriceLYX.toString(),
+                TokenID: [''] // Leave empty for now
               },
               // Then, add LSP7 holdings
               ...lsp7Holdings.map(token => {
@@ -184,7 +208,8 @@ export const AssetsProvider: React.FC<AssetsProviderProps> = ({ children }) => {
                   Price: '', // Leave empty for now
                   Change24: '',
                   TokenAmount: tokenAmount,
-                  TokenValue: '' // Leave empty for now
+                  TokenValue: '', // Leave empty for now
+                  TokenID: [''] // Leave empty for now
                 };
               })
             ],

@@ -9,3 +9,11 @@ export const numberToBytes32 = (num: number) => {
 
   return bytes32;
 }
+
+export const bytes32ToNumber = (bytes32: string) => {
+  // Convert the bytes32 string to a BigNumber
+  const bigNum = ethers.BigNumber.from(bytes32);
+
+  // Convert the BigNumber to a regular number
+  return bigNum.toNumber();
+}

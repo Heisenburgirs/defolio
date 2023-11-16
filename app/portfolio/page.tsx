@@ -15,7 +15,7 @@ import Keymanager from '@/components/keymanager/Keymanager'
 import Transfer from '@/components/transfer/Transfer';
 
 // Navbar Menu
-const menuItems = ["Assets", "Key Manager", "Guardians", "Session Keys", "Inheritance", "Carbon", "Send & Receive", "Bridge"];
+const menuItems = ["Assets", "Key Manager", "Guardians", "Session Keys", "Inheritance", "Carbon", "Send & Receive"];
 
 export default function Portfolio() {
 
