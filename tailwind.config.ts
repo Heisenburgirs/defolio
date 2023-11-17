@@ -17,6 +17,8 @@ const config: Config = {
       "sm": "250px",
       "base": "420px",
       "keymanager": "540px",
+      "extension": "579px",
+      "extension2": "588px",
       "md": "768px",
       "lg": "1100px",
       "xl": "1400px"
