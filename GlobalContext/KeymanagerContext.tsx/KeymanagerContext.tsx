@@ -10,6 +10,7 @@ interface KeymanagerState {
   isLoading: boolean;
   setControllersPermissions: React.Dispatch<React.SetStateAction<ControllerPermission[]>>;
   setChangedPermissions: React.Dispatch<React.SetStateAction<ControllerPermission[]>>;
+  setIndex: React.Dispatch<React.SetStateAction<number>>;
 }
 
 const initialState: KeymanagerState = {
@@ -18,6 +19,7 @@ const initialState: KeymanagerState = {
   isLoading: false,
   setControllersPermissions: () => {},
   setChangedPermissions: () => {},
+  setIndex: () => {},
 };
 
 const KeymanagerContext = createContext(initialState);
@@ -28,6 +30,7 @@ interface AssetsProviderProps {
 
 export const KeymanagerProvider: React.FC<AssetsProviderProps> = ({ children }) => {
   const { address, isConnected } = useAccount()
+  const [index, setIndex] = useState(0)
 
   const [isLoading, setIsLoading] = useState(false);
 
@@ -37,6 +40,7 @@ export const KeymanagerProvider: React.FC<AssetsProviderProps> = ({ children }) 
   const [changedPermissions, setChangedPermissions] = useState<ControllerPermission[]>([]);
   
   const fetchControllersPermissions = async () => {
+    console.log("FIRED")
     setIsLoading(true)
     const erc725 = new ERC725(LSP6Schema as ERC725JSONSchema[], address, 'https://rpc.testnet.lukso.gateway.fm');
 
@@ -76,9 +80,9 @@ export const KeymanagerProvider: React.FC<AssetsProviderProps> = ({ children }) 
     if (isConnected) {
       fetchControllersPermissions();
     }
-  }, [address]);
+  }, [address, index]);
   return (
-    <KeymanagerContext.Provider value={{ controllersPermissions, changedPermissions, isLoading, setControllersPermissions, setChangedPermissions }}>
+    <KeymanagerContext.Provider value={{ controllersPermissions, changedPermissions, isLoading, setControllersPermissions, setChangedPermissions, setIndex }}>
       {children}
     </KeymanagerContext.Provider>
   );

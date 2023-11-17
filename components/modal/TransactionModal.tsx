@@ -1,5 +1,3 @@
-import { useState } from "react"
-
 const TransactionModal = ({ successMsg, onBackButtonClick, transactionStep, setTransactionStep } : { successMsg: string, onBackButtonClick: () => void, transactionStep: number, setTransactionStep: (step: number) => void }) => {
 
   const stepText = ["Waiting for Confirmation", "Transaction Submitted", "Transaction Successful", "Transaction Failed"];
