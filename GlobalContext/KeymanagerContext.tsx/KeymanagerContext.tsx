@@ -6,10 +6,10 @@ import ERC725, { ERC725JSONSchema } from '@erc725/erc725.js';
 // Initial state definitions
 interface KeymanagerState {
   controllersPermissions: ControllerPermission[];
-  changedPermissions: Array<{ address: string, changed: string[] }>;
+  changedPermissions: ControllerPermission[];
   isLoading: boolean;
   setControllersPermissions: React.Dispatch<React.SetStateAction<ControllerPermission[]>>;
-  setChangedPermissions: React.Dispatch<React.SetStateAction<Array<{ address: string, changed: string[] }>>>;
+  setChangedPermissions: React.Dispatch<React.SetStateAction<ControllerPermission[]>>;
 }
 
 const initialState: KeymanagerState = {
@@ -34,7 +34,7 @@ export const KeymanagerProvider: React.FC<AssetsProviderProps> = ({ children }) 
   // Existing permissions for given addresses
   const [controllersPermissions, setControllersPermissions] = useState<ControllerPermission[]>([]);
   // Adjusted permissions for given addresses
-  const [changedPermissions, setChangedPermissions] = useState<Array<{ address: string, changed: string[] }>>([]);
+  const [changedPermissions, setChangedPermissions] = useState<ControllerPermission[]>([]);
   
   const fetchControllersPermissions = async () => {
     setIsLoading(true)
@@ -58,7 +58,8 @@ export const KeymanagerProvider: React.FC<AssetsProviderProps> = ({ children }) 
         const decodedPermission = erc725.decodePermissions(addressPermission.value);
         newControllersPermissions.push({ 
           address: controllerAddress, 
-          permissions: decodedPermission 
+          permissions: decodedPermission,
+          isChanged: false
         });
       } else {
         console.error(`addressPermission.value for ${controllerAddress} is not a string or is null`);
@@ -66,7 +67,7 @@ export const KeymanagerProvider: React.FC<AssetsProviderProps> = ({ children }) 
     }
 
     setControllersPermissions(newControllersPermissions);
-    setChangedPermissions([]);
+    setChangedPermissions(newControllersPermissions);
     setIsLoading(false)
   }
 

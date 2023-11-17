@@ -126,6 +126,7 @@ declare global {
   interface ControllerPermission {
     address: string;
     permissions: Permission;
+    isChanged: boolean;
   }
 
   interface ToggleSwitchProps {

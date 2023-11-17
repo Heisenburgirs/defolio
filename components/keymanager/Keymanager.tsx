@@ -29,6 +29,10 @@ const Keymanager = () => {
   const [visibilityStates, setVisibilityStates] = useState<VisibilityState>({});
   const [dropdownVisible, setDropdownVisible] = useState<Record<string, boolean>>({});
 
+  
+  const [arePermissionsChanged, setArePermissionsChanged] = useState(false)
+  const [controllerAddresses, setControllerAddresses] = useState<string[]>([])
+
   const togglePermissionsDropdown = (controllerAddress: string) => {
     if (visibilityStates[controllerAddress]) {
         // Start closing animation immediately
@@ -52,7 +56,9 @@ const Keymanager = () => {
   };
 
   const updatePermission = (controllerAddress: string, permissionKey: string) => {
-    setControllersPermissions(currentPermissions =>
+    setArePermissionsChanged(true);
+
+    setChangedPermissions(currentPermissions =>
       currentPermissions.map(controller => {
         if (controller.address === controllerAddress) {
           // Update the permissions
@@ -61,94 +67,99 @@ const Keymanager = () => {
             [permissionKey]: !controller.permissions[permissionKey]
           };
   
-          return { ...controller, permissions: updatedPermissions };
+          return { ...controller, permissions: updatedPermissions, isChanged: true };
         }
         return controller;
       })
     );
-  
-    setChangedPermissions(prevState => {
-      const existingEntryIndex = prevState.findIndex(entry => entry.address === controllerAddress);
-      if (existingEntryIndex !== -1) {
-        // Found an existing entry
-        const existingEntry = prevState[existingEntryIndex];
-        const isAlreadyChanged = existingEntry.changed.includes(permissionKey);
-  
-        let newChanged;
-        if (isAlreadyChanged) {
-          // Remove the permissionKey from the changed array
-          newChanged = existingEntry.changed.filter(key => key !== permissionKey);
-        } else {
-          // Add the permissionKey to the changed array
-          newChanged = [...existingEntry.changed, permissionKey];
-        }
-  
-        if (newChanged.length === 0) {
-          // If no permissions are changed for this address, remove the object completely
-          return [
-            ...prevState.slice(0, existingEntryIndex),
-            ...prevState.slice(existingEntryIndex + 1)
-          ];
-        } else {
-          // Update the changed array for this address
-          return [
-            ...prevState.slice(0, existingEntryIndex),
-            { ...existingEntry, changed: newChanged },
-            ...prevState.slice(existingEntryIndex + 1)
-          ];
-        }
-      } else {
-        // No existing entry, add a new one
-        return [...prevState, { address: controllerAddress, changed: [permissionKey] }];
-      }
-    });
-  };  
 
-  const test =async() => {
-  }
+    setControllerAddresses(prevAddresses =>
+      prevAddresses.includes(controllerAddress) ? prevAddresses : [...prevAddresses, controllerAddress]
+    );
+  };
   
-  const [arePermissionsChanged, setArePermissionsChanged] = useState(false)
-
-  useEffect(() => {
-    if (changedPermissions.length > 0) {
-      setArePermissionsChanged(true);
-    } else {
-      setArePermissionsChanged(false);
-    }
-  }, [changedPermissions])
-
   const handleReset = () => {
     // Clear everything from changedPermissions
-    setChangedPermissions([]);
-  
-    // Reset the controllersPermissions to their original state
-    // This requires reverting the changes made to the permissions
-    setControllersPermissions(currentPermissions =>
-      currentPermissions.map(controller => {
-        // Find if there were any changes for this controller
-        const changesForController = changedPermissions.find(change => change.address === controller.address);
-  
-        if (changesForController) {
-          // Revert the changes
-          const revertedPermissions = { ...controller.permissions };
-  
-          changesForController.changed.forEach(permissionKey => {
-            revertedPermissions[permissionKey] = !revertedPermissions[permissionKey];
-          });
-  
-          return { ...controller, permissions: revertedPermissions };
-        }
-  
-        return controller;
-      })
-    );
+    setChangedPermissions(controllersPermissions);
+    setArePermissionsChanged(false);
   };
 
   // Existing Controller Permissions
-  const handleConfirm = () => {
-    console.log("Permissions changed");
+  const handleConfirm = async () => {
+    console.log(changedPermissions)
+    const erc725 = new ERC725(
+      LSP6Schema as ERC725JSONSchema[],
+      address,
+      'https://rpc.testnet.lukso.network'
+    );
 
+    const provider = new ethers.providers.Web3Provider(window.lukso);
+    const signer = provider.getSigner();
+
+    const myUniversalProfile = new ethers.Contract(address || '', UniversalProfile.abi, signer);
+
+    const controllersWithChanges = changedPermissions.filter(controller => controller.isChanged);
+
+    console.log(controllersWithChanges)
+
+    const encodedDataArray = controllersWithChanges.map(controller => {
+      // Encode the permissions for this controller
+      const encodedPermissions = erc725.encodePermissions(controller.permissions);
+    
+      // Prepare the data for blockchain update
+      const data = erc725.encodeData([
+        {
+          keyName: 'AddressPermissions:Permissions:<address>',
+          dynamicKeyParts: controller.address,
+          value: encodedPermissions,
+        }
+        // Additional data encoding can be added here if necessary
+      ]);
+    
+      return {
+        address: controller.address,
+        encodedData: data
+      };
+    });
+
+    const allKeys = encodedDataArray.flatMap(item => item.encodedData.keys);
+    const allValues = encodedDataArray.flatMap(item => item.encodedData.values);
+
+    try {
+      const tx = await myUniversalProfile.setDataBatch(allKeys, allValues);
+      setTransactionStep(2)
+
+      const receipt = await tx.wait();
+      console.log(receipt)
+      setTransactionStep(3)
+    } catch (err) {
+      // First, check if err is an object and has a 'code' property
+      if (typeof err === 'object' && err !== null && 'code' in err) {
+        // Now TypeScript knows err is an object and has a 'code' property
+        const errorCode = (err as { code: unknown }).code;
+        if (errorCode === 4001) {
+          // Handle user's rejection
+          console.log("User declined the transaction");
+          notify("Signature Declined", NotificationType.Error);
+          setIsAdditionInitiated(false)
+        } else {
+          // Handle other errors
+          console.log("ERROR SETTING CONTROLLER", err);
+          setIsAdditionInitiated(true)
+          notify("Error Setting Controller", NotificationType.Error);
+          setTransactionStep(4);
+        }
+      } else {
+        // Handle the case where err is not an object or doesn't have 'code'
+        console.log("An unexpected error occurred", err);
+        setTransactionStep(4);
+      }
+    }
   };
+
+  const test = async() => {
+    console.log(controllersPermissions)
+  }
 
   // Dynamic render of permissions
   const menuItems: string[] = [
@@ -229,7 +240,7 @@ const Keymanager = () => {
   "TRANSFERVALUE": "Transfer Value",
   };
 
-  const chunkSizeOptions = [[1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1], [3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]];
+  const chunkSizeOptions = [[4, 4, 5, 5, 3, 2], [3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1], [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]];
 
   const getChunkSizesForScreenSize = () => {
     if (window.innerWidth <= 500) {
@@ -479,16 +490,16 @@ const Keymanager = () => {
       :
       (
       <>
-        <div className="flex w-full justify-between items-center">
+        <div className="flex sm:gap-4 keymanager:gap-0 sm:flex-col keymanager:flex-row w-full keymanager:justify-between keymanager:items-center">
           <div className="flex flex-col gap-2">
             <div className="text-medium font-bold text-purple">Controller Permissions</div>
             <div className="sm:text-xsmall md:text-small text-purple opacity-90">Remove, add and manage controller permissions</div>
           </div>
-          <div onClick={() => { if (isConnected) setAddController(true) }}  className="py-2 px-4 rounded-15 text-xsmall border border-lightPurple text-purple font-bold hover:cursor-pointer hover:bg-purple hover:text-white transition">
+          <div onClick={() => { if (isConnected) setAddController(true) }}  className="w-[135px] py-2 px-4 rounded-15 text-xsmall border border-lightPurple text-purple font-bold hover:cursor-pointer hover:bg-purple hover:text-white transition">
             Add Controller
           </div>
         </div>
-        <PopupButton isVisible={arePermissionsChanged} onReset={handleReset} onConfirm={handleConfirm}/>
+        <PopupButton isVisible={arePermissionsChanged} onReset={handleReset} onConfirm={handleConfirm} controllerAddresses={controllerAddresses}/>
         <div className="flex flex-col w-full gap-2">
           <div className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12">
             <div className="flex w-full justify-between items-center">
@@ -510,13 +521,13 @@ const Keymanager = () => {
         )
         :
         (
-          controllersPermissions.map((controller, index) => (
+          changedPermissions.map((controller, index) => (
             <div key={index} className="hidden sm:table-header-group grid grid-cols-12 border border-lightPurple border-opacity-25 rounded-15 py-2 px-4">
               <div  className="flex w-full justify-between items-center py-2">
                 <div className="flex items-center gap-4 sm:col-span-2 base:col-span-1 lg:col-span-5 text-purple font-normal">
                   <div onClick={test} className="text-small font-bold">{formatAddress(controller.address)}</div>
                 </div>
-                <div className="sm:hidden base:block sm:col-span-1 lg:col-span-4 text-purple font-normal flex">
+                <div className="sm:col-span-1 lg:col-span-4 text-purple font-normal flex">
                   <div onClick={() => {togglePermissionsDropdown(controller.address)}} className="font-bold text-xsmall transition hover:cursor-pointer">show more</div>
                 </div>
               </div> 
