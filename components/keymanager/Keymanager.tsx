@@ -32,7 +32,7 @@ const Keymanager = () => {
 
   
   const [arePermissionsChanged, setArePermissionsChanged] = useState(false)
-  const [controllerAddresses, setControllerAddresses] = useState<string[]>([])
+  const [controllerAddresses, setControllerAddresses] = useState<{ address: string, permissions: string[] }[]>([]);
 
   const togglePermissionsDropdown = (controllerAddress: string) => {
     if (visibilityStates[controllerAddress]) {
@@ -72,38 +72,59 @@ const Keymanager = () => {
         }
         return controller;
       })
-    );
+    )
 
-    setControllerAddresses(prevAddresses => {
-      const addressExists = prevAddresses.includes(controllerAddress);
-      let newAddresses = prevAddresses;
-  
-      if (addressExists) {
-        if (prevAddresses.length === 1) {
-          // If it's the last item, delay the removal and setting setArePermissionsChanged
-          setTimeout(() => {
-            setControllerAddresses([]);
-            setArePermissionsChanged(false);
-          }, 500);
+    setControllerAddresses(currentAddresses => {
+      const addressIndex = currentAddresses.findIndex(c => c.address === controllerAddress);
+    
+      if (addressIndex > -1) {
+        // Address exists, update permissions
+        let updatedPermissions = [...currentAddresses[addressIndex].permissions];
+        const permissionExists = updatedPermissions.includes(permissionKey);
+        
+        if (permissionExists) {
+          // Remove the permission
+          updatedPermissions = updatedPermissions.filter(key => key !== permissionKey);
         } else {
-          // If it's not the last item, remove it immediately
-          newAddresses = prevAddresses.filter(addr => addr !== controllerAddress);
-          setArePermissionsChanged(true);
+          // Add the permission
+          updatedPermissions.push(permissionKey);
+        }
+    
+        if (updatedPermissions.length === 0) {
+          // If no permissions left, remove the address
+          return [
+            ...currentAddresses.slice(0, addressIndex),
+            ...currentAddresses.slice(addressIndex + 1),
+          ];
+        } else {
+          // Update the address with modified permissions
+          const updatedAddress = { ...currentAddresses[addressIndex], permissions: updatedPermissions };
+          return [
+            ...currentAddresses.slice(0, addressIndex),
+            updatedAddress,
+            ...currentAddresses.slice(addressIndex + 1),
+          ];
         }
       } else {
-        // Immediate addition
-        newAddresses = [...prevAddresses, controllerAddress];
-        setArePermissionsChanged(true);
+        // Address does not exist, create a new entry
+        const newAddress = { address: controllerAddress, permissions: [permissionKey] };
+        return [...currentAddresses, newAddress];
       }
-  
-      return newAddresses;
     });
   };
+
+  useEffect(() => {
+    if (controllerAddresses.length > 0) {
+      setArePermissionsChanged(true);
+    } else {
+      setArePermissionsChanged(false);
+    }
+  }, [controllerAddresses])
   
   const handleReset = () => {
     // Clear everything from changedPermissions
     setChangedPermissions(controllersPermissions);
-    setArePermissionsChanged(false);
+    setControllerAddresses([])
   };
 
   // Existing Controller Permissions
@@ -534,7 +555,7 @@ const Keymanager = () => {
               Add Controller
             </div>
           </div>
-          <PopupButton isVisible={arePermissionsChanged} onReset={handleReset} onConfirm={handleConfirm} controllerAddresses={controllerAddresses}/>
+          <PopupButton isVisible={arePermissionsChanged} onReset={handleReset} onConfirm={handleConfirm} controllerAddresses={controllerAddresses.map(controller => controller.address)}/>
           <div className="flex flex-col w-full gap-2">
             <div className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12">
               <div className="flex w-full justify-between items-center">

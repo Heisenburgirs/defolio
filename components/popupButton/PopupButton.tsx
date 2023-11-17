@@ -1,8 +1,18 @@
 import { formatAddress } from "@/app/utils/useFormatAddress";
+import { useEffect, useState } from "react";
 
 export const PopupButton = ({ isVisible, onReset, onConfirm, controllerAddresses } : { isVisible: boolean, onReset: () => void, onConfirm: () => void, controllerAddresses: string[] }) => {
   const visibilityClass = isVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4';
   const transitionClass = 'transition ease-in-out duration-500';
+
+  const [addresses, setAddresses] = useState<string[]>()
+
+  useEffect(() => {
+    if (controllerAddresses.length != 0) {
+      setAddresses(controllerAddresses)
+      console.log("addresses", addresses)
+    }
+  }, [controllerAddresses]);
 
   return (
     <div className={`fixed bottom-0 right-0 z-50 flex w-auto h-auto py-8 px-8 ${visibilityClass} ${transitionClass}`}>
@@ -12,9 +22,9 @@ export const PopupButton = ({ isVisible, onReset, onConfirm, controllerAddresses
         </span>
 
         <div className="flex flex-col gap-2">
-          {controllerAddresses.map((controller, index) => (
+          {addresses?.map((controller, index) => (
           <div key={index} className="text-lightPurple font-bold flex w-full justify-center">
-            {formatAddress(controller)}
+            {controller ? formatAddress(controller) : "0x00"}
           </div>
 
           ))}
