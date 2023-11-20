@@ -18,9 +18,10 @@ import Transfer from '@/components/transfer/Transfer';
 
 // Notification
 import Notifications from '@/components/notifications/Notifications';
+import Vault from '@/components/vault/Vault';
 
 // Navbar Menu
-const menuItems = ["Assets", "Key Manager", "Guardians", "Inheritance", "Carbon", "Send & Receive", "Notifications"];
+const menuItems = ["Assets", "Key Manager", "Vault", "Guardians", "Inheritance", "Carbon", "Send & Receive", "Notifications"];
 
 export default function Portfolio() {
 
@@ -69,6 +70,10 @@ export default function Portfolio() {
         {
           selectedMenuItem == "Notifications" && 
           <Notifications />
+        }
+        {
+          selectedMenuItem == "Vault" &&
+          <Vault />
         }
       </section>
     </main>

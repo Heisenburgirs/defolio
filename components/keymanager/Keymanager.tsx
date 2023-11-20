@@ -156,7 +156,6 @@ const Keymanager = () => {
           dynamicKeyParts: controller.address,
           value: encodedPermissions,
         }
-        // Additional data encoding can be added here if necessary
       ]);
     
       return {

@@ -10,7 +10,6 @@ export const PopupButton = ({ isVisible, onReset, onConfirm, controllerAddresses
   useEffect(() => {
     if (controllerAddresses.length != 0) {
       setAddresses(controllerAddresses)
-      console.log("addresses", addresses)
     }
   }, [controllerAddresses]);
 
