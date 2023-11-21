@@ -6,7 +6,7 @@ import { useAccount } from "wagmi";
 import { NotificationType, notify } from "../toast/Toast";
 import { isValidEthereumAddress } from "@/app/utils/useIsValidEthereumAddress";
 import { ethers } from "ethers";
-import { useAssets } from "@/GlobalContext/AssetsContext.tsx/AssetsContext";
+import { useAssets } from "@/GlobalContext/AssetsContext/AssetsContext";
 import QRCode from "react-qr-code";
 import Image from 'next/image';
 import copy from '@/public/icons/copy.svg';

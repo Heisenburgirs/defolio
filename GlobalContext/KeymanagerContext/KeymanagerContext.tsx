@@ -40,7 +40,6 @@ export const KeymanagerProvider: React.FC<AssetsProviderProps> = ({ children }) 
   const [changedPermissions, setChangedPermissions] = useState<ControllerPermission[]>([]);
   
   const fetchControllersPermissions = async () => {
-    console.log("FIRED")
     setIsLoading(true)
     const erc725 = new ERC725(LSP6Schema as ERC725JSONSchema[], address, 'https://rpc.testnet.lukso.gateway.fm');
 

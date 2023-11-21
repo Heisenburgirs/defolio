@@ -13,7 +13,7 @@ import LSP7Mintable from "@lukso/lsp-smart-contracts/artifacts/LSP7Mintable.json
 import LSP8Mintable from "@lukso/lsp-smart-contracts/artifacts/LSP8Mintable.json";
 import { copyToClipboard } from '@/app/utils/useCopyToCliptboard';
 import { NotificationType, notify } from '../toast/Toast';
-import { useAssets } from '@/GlobalContext/AssetsContext.tsx/AssetsContext';
+import { useAssets } from '@/GlobalContext/AssetsContext/AssetsContext';
 import { numberToBytes32 } from '@/app/utils/useBytes32';
 import TokenType from '../tokentype/TokenType';
 

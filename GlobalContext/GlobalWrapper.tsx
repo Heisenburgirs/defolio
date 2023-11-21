@@ -1,6 +1,7 @@
 import React, { ReactNode } from 'react';
-import { AssetsProvider } from './AssetsContext.tsx/AssetsContext';
-import { KeymanagerProvider } from './KeymanagerContext.tsx/KeymanagerContext';
+import { AssetsProvider } from './AssetsContext/AssetsContext';
+import { KeymanagerProvider } from './KeymanagerContext/KeymanagerContext';
+import { VaultProvider } from './VaultContext/VaultContext';
 
 interface GlobalWrapperProps {
   children: ReactNode;
@@ -8,11 +9,13 @@ interface GlobalWrapperProps {
 
 const GlobalWrapper: React.FC<GlobalWrapperProps> = ({ children }) => {
   return (
-    <KeymanagerProvider>
-      <AssetsProvider>
-        {children}
-      </AssetsProvider>
-    </KeymanagerProvider>
+    <VaultProvider>
+      <KeymanagerProvider>
+        <AssetsProvider>
+          {children}
+        </AssetsProvider>
+      </KeymanagerProvider>
+    </VaultProvider>
   );
 };
 

@@ -10,6 +10,8 @@ import { useEffect, useState } from "react";
 import Image from 'next/image'
 import lightPurpleArrow from '@/public/icons/lightPurple_arrow.png';
 import purpleArrow from '@/public/icons/purple_arrow.png';
+import TransactionModal from "../modal/TransactionModal";
+import { NotificationType, notify } from "../toast/Toast";
 
 const Vault = () => {
   const { address, isConnected } = useAccount()
@@ -21,6 +23,9 @@ const Vault = () => {
   const [hasProvidedDesc, setHasProvidedDesc] = useState(false);
   const [name, setName] = useState('')
   const [desc, setDesc] = useState('')
+
+  const [isDeployingVault, setIsDeployingVault] = useState(false);
+  const [transactionStep, setTransactionStep] = useState(1);
 
   useEffect(() => {
     setHasProvidedName(!!name);
@@ -48,6 +53,7 @@ const Vault = () => {
   }
 
   const deployVault = async () => {
+    setIsDeployingVault(true)
     const provider = new ethers.providers.Web3Provider(window.lukso);
     const signer = provider.getSigner();
     const myUniversalProfile = new ethers.Contract(address || '', UniversalProfile.abi, signer);
@@ -76,12 +82,13 @@ const Vault = () => {
     );
 
     try {
-
       const deployVault = await vaultFactory.connect(signer).deploy(address);
+      setTransactionStep(2);
 
       console.log("Vault deployed: ", deployVault.address)
-
+      
       try {
+        setTransactionStep(1)
         const targetVaultAddress = deployVault.address;
 
         const data = erc725.encodeData([
@@ -113,19 +120,58 @@ const Vault = () => {
 
 
         const setData = await myUniversalProfile.setDataBatch(allKeys, allValues);
+        setTransactionStep(2)
 
         const txResult = await setData.wait()
 
         console.log("RESULTS ARE IN", txResult);
-
+        setTransactionStep(3)
       } catch (err) {
-        console.log("ERROR SETTING DATA")
+        // First, check if err is an object and has a 'code' property
+        if (typeof err === 'object' && err !== null && 'code' in err) {
+          // Now TypeScript knows err is an object and has a 'code' property
+          const errorCode = (err as { code: unknown }).code;
+          if (errorCode === 4001) {
+            // Handle user's rejection
+            console.log("User declined the transaction");
+            notify("Signature Declined", NotificationType.Error);
+            setIsDeployingVault(false)
+          } else {
+            // Handle other errors
+            console.log("ERROR SETTING DATA", err);
+            setIsDeployingVault(true)
+            notify("Error Setting Data", NotificationType.Error);
+            setTransactionStep(4);
+          }
+        } else {
+          // Handle the case where err is not an object or doesn't have 'code'
+          console.log("ERROR SETTING DATA", err);
+        }
       }
 
       
-    } catch (error) {
-      console.log("ERROR DEPLOYING VAULT", error)
-    }
+    } catch (err) {
+      // First, check if err is an object and has a 'code' property
+      if (typeof err === 'object' && err !== null && 'code' in err) {
+        // Now TypeScript knows err is an object and has a 'code' property
+        const errorCode = (err as { code: unknown }).code;
+        if (errorCode === 4001) {
+          // Handle user's rejection
+          console.log("User declined the transaction");
+          notify("Signature Declined", NotificationType.Error);
+          setIsDeployingVault(false)
+        } else {
+          // Handle other errors
+          console.log("ERROR DEPLOYING VAULT", err);
+          setIsDeployingVault(true)
+          notify("Error Deploying Vault", NotificationType.Error);
+          setTransactionStep(4);
+        }
+      } else {
+        // Handle the case where err is not an object or doesn't have 'code'
+        console.log("ERROR DEPLOYING VAULT", err);
+      }
+    } 
   }
 
   const test = async() => {
@@ -137,56 +183,68 @@ const Vault = () => {
     <div className="flex w-full h-full bg-white shadow rounded-15">
       <div className="flex flex-col py-8 px-6 w-full h-full gap-12">
         {addVault ? (
-          <>
-            <title>New Vault</title>
-            <div
-              className="flex gap-2 px-4 items-center text-lightPurple hover:text-purple hover:cursor-pointer transition text-small"
-              onMouseEnter={() => setHover(true)}
-              onMouseLeave={() => setHover(false)}
-              onClick={() => {setAddVault(false)}}
-            >
-              <div 
-                className="transition ease-in-out duration-200"
+          isDeployingVault ? (
+            <TransactionModal
+              successMsg='Vault Successfully Created'
+              onBackButtonClick={() => {setIsDeployingVault(false); setTransactionStep(1); setAddVault(false)}} 
+              transactionStep={transactionStep}
+              setTransactionStep={setTransactionStep}
+            />
+          )
+          :
+          (
+            <>
+              <title>New Vault</title>
+              <div
+                className="flex gap-2 px-4 items-center text-lightPurple hover:text-purple hover:cursor-pointer transition text-small"
+                onMouseEnter={() => setHover(true)}
+                onMouseLeave={() => setHover(false)}
+                onClick={() => {setAddVault(false)}}
               >
-                <Image 
-                  src={hover ? purpleArrow : lightPurpleArrow} 
-                  width={24} 
-                  height={24} 
-                  alt="Back"
-                  className="hover:cursor-pointer"
-                />
-              </div>
-              <div>Back</div>
-            </div>
-            <div className="flex flex-col w-full h-full items-center py-8 gap-16">
-              <h1 className="text-medium font-bold text-purple">Deploy New Vault</h1>
-              <div className="flex flex-col gap-6 w-[400px]">
-                <div className="flex flex-col gap-2">
-                  <h2 className="text-lightPurple">Name</h2>
-                  <input type="text" className="rounded-15 border border-lightPurple focus:outline-purple py-2 px-6 text-purple font-bold" placeholder="Enter vault name..."
-                  onChange={(e) => { setName(e.target.value)}}
+                <div 
+                  className="transition ease-in-out duration-200"
+                >
+                  <Image 
+                    src={hover ? purpleArrow : lightPurpleArrow} 
+                    width={24} 
+                    height={24} 
+                    alt="Back"
+                    className="hover:cursor-pointer"
                   />
                 </div>
-                <div className="flex flex-col gap-2">
-                  <h2 className="text-lightPurple">Description</h2>
-                  <textarea className="h-[350px] rounded-15 border border-lightPurple focus:outline-purple py-2 px-6 text-purple font-bold" placeholder="Enter vault description..."
-                    onChange={(e) => { setDesc(e.target.value)}}
-                  />
-                </div>
+                <div>Back</div>
               </div>
-              <button 
-                className={
-                  `py-2 px-6 bg-lightPurple bg-opacity-75 text-medium rounded-15 text-white transition
-                  ${hasProvidedName && hasProvidedDesc ? 'bg-purple bg-opacity-100' : 'cursor-not-allowed opacity-50'}`
-                }
-                onClick={deployVault}
-                disabled={!hasProvidedName || !hasProvidedDesc}
-              >
-                Finalize Vault
-              </button>
-              <div onClick={getData}>test</div>
-            </div>
-          </>
+              <div className="flex flex-col w-full h-full items-center py-8 gap-16">
+                <h1 className="text-medium font-bold text-purple">Deploy New Vault</h1>
+                <div className="flex flex-col gap-6 w-[400px]">
+                  <div className="flex flex-col gap-2">
+                    <h2 className="text-lightPurple">Name</h2>
+                    <input type="text" className="rounded-15 border border-lightPurple focus:outline-purple py-2 px-6 text-purple font-bold" placeholder="Enter vault name..."
+                    onChange={(e) => { setName(e.target.value)}}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <h2 className="text-lightPurple">Description</h2>
+                    <textarea className="h-[350px] rounded-15 border border-lightPurple focus:outline-purple py-2 px-6 text-purple font-bold" placeholder="Enter vault description..."
+                      onChange={(e) => { setDesc(e.target.value)}}
+                    />
+                  </div>
+                </div>
+                <button 
+                  className={
+                    `py-2 px-6 bg-lightPurple bg-opacity-75 text-medium rounded-15 text-white transition
+                    ${hasProvidedName && hasProvidedDesc ? 'bg-purple bg-opacity-100' : 'cursor-not-allowed opacity-50'}`
+                  }
+                  onClick={deployVault}
+                  disabled={!hasProvidedName || !hasProvidedDesc}
+                >
+                  Finalize Vault
+                </button>
+                <div onClick={getData}>test</div>
+              </div>
+            </>
+
+          )
         )
         :
         (

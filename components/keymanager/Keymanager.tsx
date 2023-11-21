@@ -15,7 +15,7 @@ import lightPurpleArrow from '@/public/icons/lightPurple_arrow.png';
 import purpleArrow from '@/public/icons/purple_arrow.png';
 import { notify, NotificationType } from '../toast/Toast';
 import TransactionModal from '../modal/TransactionModal';
-import { useKeymanager } from '@/GlobalContext/KeymanagerContext.tsx/KeymanagerContext';
+import { useKeymanager } from '@/GlobalContext/KeymanagerContext/KeymanagerContext';
 
 const Keymanager = () => {
   const { address, isConnected } = useAccount()
