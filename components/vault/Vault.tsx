@@ -20,8 +20,8 @@ import copy from '@/public/icons/copy.svg';
 import externalLink from '@/public/icons/externalLink.svg';
 import { copyToClipboard } from "@/app/utils/useCopyToCliptboard";
 import lsp3ProfileSchema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.json' assert { type: 'json' };
-import LSP5 from '@erc725/erc725.js/schemas/LSP5ReceivedAssets.json';
 import LSP1UniversalReceiverDelegateVault from '@lukso/lsp-smart-contracts/artifacts/LSP1UniversalReceiverDelegateVault.json';
+import { ERC725YDataKeys } from '@lukso/lsp-smart-contracts/constants.js';
 
 const Vault = () => {
   const { address, isConnected } = useAccount()
@@ -115,13 +115,36 @@ const Vault = () => {
     try {
       const deployVault = await vaultFactory.connect(signer).deploy(address);
 
+      // vault address
+      const deployedVaultAddress = deployVault.address
       console.log("Vault deployed: ", deployVault.address)
+
       try {
         setTransactionStep(2)
         const vaultURD = await vaultURDFactory.connect(signer).deploy();
+        console.log("vaultURD", vaultURD)
+        // URD address
+        const URDaddress = vaultURD.address;
+        console.log("URDaddress", URDaddress)
 
-        const URDaddress = vaultURD.target;
-        console.log(URDaddress)
+        // Deployed vault interface
+        const vault = new ethers.Contract(deployedVaultAddress, LSP9Vault.abi);
+
+        // Encode
+        const setDataCalldata = vault.interface.encodeFunctionData('setData', [
+          ERC725YDataKeys.LSP1.LSP1UniversalReceiverDelegate,
+          URDaddress,
+        ]);
+        console.log(setDataCalldata)
+
+        const setURD = await myUniversalProfile.connect(signer).execute(
+          0,
+          deployedVaultAddress,
+          0,
+          setDataCalldata,
+        );
+
+        console.log("setURD", setURD)
 
         try {
           setIsSettingData(true)
@@ -148,7 +171,7 @@ const Vault = () => {
           const data = erc725.encodeData([
             {
               keyName: 'VaultsDeployed[]',
-              value: targetVaultAddress,
+              value: [targetVaultAddress],
             }
           ]);
 
@@ -250,17 +273,15 @@ const Vault = () => {
   }
 
   const test = async() => {
-    const erc725js = new ERC725(LSP5 as ERC725JSONSchema[], "0xF1db196288c76edaf639130251aa9f47bc59d656", 'https://rpc.testnet.lukso.gateway.fm',
+    const erc725js = new ERC725(lsp3ProfileSchema as ERC725JSONSchema[], "0x21BE2f78D9B1A541D223a388df3C1d9d915996E0", 'https://rpc.testnet.lukso.gateway.fm',
       {
         ipfsGateway: 'https://api.universalprofile.cloud/ipfs',
       },
     );
 
-    const test = await erc725js.fetchData()
-    console.log(test)
-    //const receivedAssetsDataKey = await erc725js.fetchData('LSP5ReceivedAssets[]');
+    const receivedAssetsDataKey = await erc725js.fetchData('LSP5ReceivedAssets[]');
 
-    //console.log(receivedAssetsDataKey)
+    console.log(receivedAssetsDataKey)
   }
 
   return (
