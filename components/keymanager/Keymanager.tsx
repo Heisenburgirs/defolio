@@ -460,6 +460,9 @@ const Keymanager = () => {
             onBackButtonClick={() => {setAddController(false)}} 
             transactionStep={transactionStep}
             setTransactionStep={setTransactionStep}
+            message1='Waiting for Confirmation'
+            message2='Transaction Submitted'
+            message3='Transaction Successful'
           />
         )
         :
@@ -540,6 +543,9 @@ const Keymanager = () => {
             onBackButtonClick={() => {setIsChangePermissionInitiated(false)}} 
             transactionStep={transactionStep}
             setTransactionStep={setTransactionStep}
+            message1='Waiting for Confirmation'
+            message2='Transaction Submitted'
+            message3='Transaction Successful'
           />
         )
         :

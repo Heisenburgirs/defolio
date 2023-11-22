@@ -15,10 +15,15 @@ interface VaultObject {
 
 interface VaultData {
   vaults: VaultObject[];
+  tokenBalances: TokenBalances;
 }
 
 const initialState: VaultData = {
   vaults: [],
+  tokenBalances: {
+    LSP7: [],
+    LSP8: []
+  },
 };
 
 const VaultContext = createContext<VaultData>(initialState);
@@ -32,32 +37,67 @@ export const VaultProvider: React.FC<VaultProviderProps> = ({ children }) => {
   const [isLoading, setIsLoading] = useState(false);
 
   const [vaults, setVaults] = useState<VaultObject[]>(initialState.vaults);
+  const [tokenBalances, setTokenBalances] = useState<TokenBalances>({ LSP7: [], LSP8: [] });
 
   useEffect(() => {
 
     const fetchVaults = async() => {
-      // Get all deployed vaults
-      const vaultAddresses = new ERC725(VaultSchema, address, "https://rpc.testnet.lukso.network");
-      const fetchAddress = await vaultAddresses.fetchData(`VaultsDeployed[]`)
-      console.log("DATA FETCHED", fetchAddress)
 
-      // Get vault names
-      const vaultNames = new ERC725(VaultName, address, "https://rpc.testnet.lukso.network");
-      const fetchName = await vaultNames.fetchData({keyName: "VaultName:<address>", dynamicKeyParts: "0x4899eC2046B60C4Dd29eB5B148A97AA47d93e210"})
-      console.log("DATA FETCHED", fetchName)
+      try {
+        // Fetch all vault addresses
+        const vaultAddresses = new ERC725(VaultSchema, address, "https://rpc.testnet.lukso.network");
+        const fetchAddressResponse = await vaultAddresses.fetchData(`VaultsDeployed[]`);
+        let addresses: string[] = [];
+        if (Array.isArray(fetchAddressResponse.value)) {
+          addresses = fetchAddressResponse.value;
+        } else if (typeof fetchAddressResponse.value === 'string') {
+          addresses = [fetchAddressResponse.value]; // If it's a single string, make it an array
+        }
 
-      const vaultDesc = new ERC725(VaultDescription, address, "https://rpc.testnet.lukso.network");
-      const fetchDesc = await vaultDesc.fetchData({keyName: "VaultDescription:<address>", dynamicKeyParts: "0x4899eC2046B60C4Dd29eB5B148A97AA47d93e210"})
-      console.log("DATA FETCHED", fetchDesc)
+        // Prepare to fetch details for each vault
+        const vaultNames = new ERC725(VaultName, address, "https://rpc.testnet.lukso.network");
+        const vaultDesc = new ERC725(VaultDescription, address, "https://rpc.testnet.lukso.network");
+  
+        // Use Promise.all to handle asynchronous operations for each address
+        const vault = await Promise.all(addresses.map(async (vaultAddress: string) => {
+          // Fetch name for the vault
+          const fetchNameResponse = await vaultNames.fetchData({keyName: "VaultName:<address>", dynamicKeyParts: vaultAddress});
+          let name = '';
+          if (typeof fetchNameResponse.value === 'string') {
+            name = fetchNameResponse.value;
+          }
+
+          // Fetch description for the vault
+          const fetchDescResponse = await vaultDesc.fetchData({keyName: "VaultDescription:<address>", dynamicKeyParts: vaultAddress});
+          let desc = '';
+          if (typeof fetchDescResponse.value === 'string') {
+            desc = fetchDescResponse.value;
+          }
+
+          // Return a new VaultObject
+          return {
+            contract: vaultAddress,
+            name: name,
+            desc: desc
+          };
+        }));
+    
+        // Update the state with the new array of VaultObjects
+        setVaults(vault);
+        //setTokenBalances(modifiedTokenBalances);
+
+      } catch (error) {
+        console.error("Error fetching vault data:", error);
+      }
     }
 
     if (isConnected) {
       fetchVaults()
     }
-  }, [address])
+  }, [address, isConnected])
   
   return (
-    <VaultContext.Provider value={{ vaults }}>
+    <VaultContext.Provider value={{ vaults, tokenBalances }}>
       {children}
     </VaultContext.Provider>
   );

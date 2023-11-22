@@ -1,6 +1,7 @@
-const TransactionModal = ({ successMsg, onBackButtonClick, transactionStep, setTransactionStep } : { successMsg: string, onBackButtonClick: () => void, transactionStep: number, setTransactionStep: (step: number) => void }) => {
-
-  const stepText = ["Waiting for Confirmation", "Transaction Submitted", "Transaction Successful", "Transaction Failed"];
+const TransactionModal = ({ successMsg, message1, message2, message3, onBackButtonClick, transactionStep, setTransactionStep } : { successMsg: string, message1: string, message2: string, message3: string, onBackButtonClick: () => void, transactionStep: number, setTransactionStep: (step: number) => void }) => {
+  //"Waiting for Confirmation", "Transaction Submitted", "Transaction Successful"
+  
+  const stepText = [message1, message2, message3, "Transaction Failed"];
   const stepImages = [
     <div className="loading opacity-75 w-full flex justify-center items-center p-16">
       <span className="loading__dot"></span>
