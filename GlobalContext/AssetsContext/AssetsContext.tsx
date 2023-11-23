@@ -187,7 +187,6 @@ export const AssetsProvider: React.FC<AssetsProviderProps> = ({ children }) => {
                 Name: 'Lukso',
                 Symbol: 'LYX',
                 Price: lyxPrice.toString(),
-                Change24: "15",
                 TokenAmount: balanceValue.toString(),
                 TokenValue: totalPriceLYX.toString(),
                 TokenID: [''] // Leave empty for now
@@ -204,7 +203,6 @@ export const AssetsProvider: React.FC<AssetsProviderProps> = ({ children }) => {
                   Name: typeof token.symbol === 'string' ? token.symbol : 'Unknown Symbol',
                   Symbol: typeof token.symbol === 'string' ? token.symbol : 'Unknown Symbol',
                   Price: '', // Leave empty for now
-                  Change24: '',
                   TokenAmount: tokenAmount,
                   TokenValue: '', // Leave empty for now
                   TokenID: [''] // Leave empty for now

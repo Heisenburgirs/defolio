@@ -23,9 +23,16 @@ import lsp3ProfileSchema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.jso
 import LSP1UniversalReceiverDelegateVault from '@lukso/lsp-smart-contracts/artifacts/LSP1UniversalReceiverDelegateVault.json';
 import { ERC725YDataKeys, PERMISSIONS } from '@lukso/lsp-smart-contracts/constants.js';
 
+interface VaultObject {
+  contract: string;
+  name: string;
+  desc: string;
+  tokenBalances: TokenBalances;
+}
+
 const Vault = () => {
   const { address, isConnected } = useAccount()
-  const { vaults, tokenBalances } = useVault()
+  const { vaults } = useVault()
   const [isLoading, setIsLoading] = useState(false)
   const [isSettingData, setIsSettingData] = useState(false);
 
@@ -44,18 +51,22 @@ const Vault = () => {
   const [tokenType, setTokenType] = useState<string>("LSP7")
   const [isDropdownVisible, setIsDropdownVisible] = useState<number | null>(null);
   const [balanceVisible, setBalanceVisible] = useState<boolean>(true);
+  const [selectedVault, setSelectedVault] = useState<VaultObject>();
 
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredLSP7Tokens = tokenBalances.LSP7.filter(token => 
+  const filteredLSP7Tokens = selectedVault?.tokenBalances.LSP7.filter(token => 
     token.Name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     token.Symbol.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredLSP8Tokens = tokenBalances.LSP8.filter(token => 
+  const filteredLSP8Tokens = selectedVault?.tokenBalances.LSP8.filter(token => 
     token.Name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     token.Symbol.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  
+  const safeFilteredLSP7Tokens = filteredLSP7Tokens ?? [];
+  const safeFilteredLSP8Tokens = filteredLSP8Tokens ?? [];
   
   const dropdownRef = useRef<HTMLDivElement | null>(null);
 
@@ -299,7 +310,7 @@ const Vault = () => {
               className="flex gap-2 px-4 items-center text-lightPurple hover:text-purple hover:cursor-pointer transition text-small"
               onMouseEnter={() => setHover(true)}
               onMouseLeave={() => setHover(false)}
-              onClick={() => {setAddVault(false)}}
+              onClick={() => {setIsManage(false)}}
             >
               <div 
                 className="transition ease-in-out duration-200"
@@ -315,22 +326,28 @@ const Vault = () => {
               <div>Back</div>
             </div>
             <div className="flex w-full h-full flex-col gap-8 px-4">
-              <div className="flex flex-col gap-2">
-                <div className="text-purple font-bold text-large">Title</div>
-                <div className="text-purple">description</div>
+              <div className="flex flex-col gap-6">
+                <div className="flex flex-col gap-2">
+                  <div className="text-purple font-bold text-large">{selectedVault?.name}</div>
+                  <div className="text-purple">{selectedVault?.desc}</div>
+                </div>
+                <div className="flex gap-2 items-center hover:cursor-pointer opacity-75" onClick={() => {copyToClipboard(selectedVault?.contract); notify("Vault Address Copied", NotificationType.Success)}}>
+                  <div className="text-purple">{formatAddress(selectedVault?.contract || "")}</div>
+                  <Image src={copy} width={12} height={12} alt="Copy vault address" />
+                </div>
               </div>
-              <div className="flex w-full justify-between">
+              <div className="flex sm:flex-col keymanager:flex-row sm:gap-4 keymanager:gap-0 w-full justify-between">
                 <TokenType tokenType={tokenType} setTokenType={setTokenType}/>
-                <SearchBar placeholder="Search for a token..." onSearch={value => setSearchQuery(value)}  />
+                <SearchBar placeholder="Search for a token..." onSearch={value => setSearchQuery(value)} />
               </div>
 
               <div className="flex flex-col w-full gap-2">
                 <div className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12">
-                  <div className="grid sm:grid-cols-4 lg:grid-cols-12">
-                    <div className="sm:col-span-2 base:col-span-1 lg:col-span-4 text-purple font-normal opacity-75 flex">
+                  <div className="flex w-full justify-between">
+                    <div className="sm:col-span-2 text-purple font-normal opacity-75 flex">
                       Token
                     </div>
-                    <div className="base:justify-end lg:justify-start sm:col-span-1 lg:col-span-3 text-purple font-normal opacity-75 flex">
+                    <div className="flex w-full justify-end text-purple font-normal opacity-75 flex">
                       Balance
                     </div>
                     <div className="sm:col-span-1 lg:col-span-1"></div>
@@ -351,17 +368,16 @@ const Vault = () => {
                   )
                   :
                   (
-                    isConnected &&
-                    (tokenType === "LSP7" ? filteredLSP7Tokens : filteredLSP8Tokens).map((token, index) => (
+                    (tokenType === "LSP7" ? safeFilteredLSP7Tokens : safeFilteredLSP8Tokens).map((token, index) => (
                       <div key={index} className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12 py-2">
-                        <div className="grid sm:grid-cols-4 lg:grid-cols-12 items-center">
-                          <div className="flex items-center gap-4 sm:col-span-2 base:col-span-1 lg:col-span-4 text-purple font-normal opacity-75">
+                        <div className="flex w-full justify-between items-center">
+                          <div className="flex items-center gap-4 text-purple font-normal opacity-75">
                             <div className="flex flex-col">
                               <div className="text-small font-bold">{token.Name}</div>
                               <div className="text-xsmall opacity-75">{token.Symbol}</div>
                             </div>
                           </div>
-                          <div onClick={() => handleDropdownClick(index)} className="relative flex flex-col gap-2 sm:col-span-1 lg:col-span-1 pr-2 w-full items-end justify-end hover:cursor-pointer">
+                          <div onClick={() => handleDropdownClick(index)} className="relative flex flex-col gap-2 pr-2 w-full items-end justify-end hover:cursor-pointer">
                             <div className="w-[3px] h-[3px] rounded-[99px] bg-lightPurple bg-opacity-75"></div>
                             <div className="w-[3px] h-[3px] rounded-[99px] bg-lightPurple bg-opacity-75"></div>
                             <div className="w-[3px] h-[3px] rounded-[99px] bg-lightPurple bg-opacity-75"></div>
@@ -476,7 +492,12 @@ const Vault = () => {
                       </div>
                       <div className="text-purple text-xsmall font-bold opacity-75">{vault.desc}</div>
                     </div>
-                    <div className="w-full text-center py-2 rounded-15 border border-lightPurple text-purple hover:cursor-pointer hover:bg-lightPurple hover:text-white transition">Manage</div>
+                    <div 
+                      onClick={() => {
+                        setIsManage(true);
+                        setSelectedVault(vault);
+                      }}
+                      className="w-full text-center py-2 rounded-15 border border-lightPurple text-purple hover:cursor-pointer hover:bg-lightPurple hover:text-white transition">Manage</div>
                   </div>
                 ))}
                 
