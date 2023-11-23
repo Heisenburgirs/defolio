@@ -13,7 +13,7 @@ import Assets from '@/components/assets/Assets'
 // Keymanager
 import Keymanager from '@/components/keymanager/Keymanager'
 
-// Send & Receive
+// Send
 import Transfer from '@/components/transfer/Transfer';
 
 // Notification
@@ -21,7 +21,7 @@ import Notifications from '@/components/notifications/Notifications';
 import Vault from '@/components/vault/Vault';
 
 // Navbar Menu
-const menuItems = ["Assets", "Key Manager", "Vault", "Guardians", "Inheritance", "Carbon", "Send & Receive", "Notifications"];
+const menuItems = ["Assets", "Key Manager", "Vault", "Guardians", "Inheritance", "Carbon", "Send", "Notifications"];
 
 export default function Portfolio() {
 
@@ -64,7 +64,7 @@ export default function Portfolio() {
           <Keymanager />
         }
         {
-          selectedMenuItem == "Send & Receive" && 
+          selectedMenuItem == "Send" && 
           <Transfer />
         }
         {

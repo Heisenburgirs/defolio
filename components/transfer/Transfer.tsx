@@ -94,17 +94,17 @@ const Transfer = () => {
   }, [recipientAddress, selectedAsset, sendAmount]);
 
   const transfer = async () => {
-    // Check if selectedAsset is a valid Ethereum address
     if (selectedAsset)
-
-    if (!isValidEthereumAddress(selectedAsset?.Address)) {
-      notify("Invalid token", NotificationType.Error)
-      return;
-    }
 
     // Check if recipientAddress is a valid Ethereum address
     if (!isValidEthereumAddress(recipientAddress)) {
       notify("Invalid recipient", NotificationType.Error)
+      return; 
+    }
+
+    // Compare to balance
+    if (sendAmount >= selectedAsset.TokenAmount) {
+      notify("Amount Exceeds Balance", NotificationType.Error)
       return; 
     }
 
@@ -113,14 +113,20 @@ const Transfer = () => {
     const LSP8contract = new ethers.Contract(selectedAsset.Address, LSP8ABI.abi, signer);
     const LSP7contract = new ethers.Contract(selectedAsset.Address, LSP7ABI.abi, signer);
 
-    if (isNFTSelected) {
+    if (selectedAsset.Address === "0x") {
       try {
-        setTransactionStep(2)
-        const transaction = await LSP8contract.transfer(address, recipientAddress, numberToBytes32(Number(selectedTokenId)), safeTransfer, '0x');
         setIsTransferInitiated(true)
-        await transaction.wait();
-        notify("NFT transferred", NotificationType.Success)
+        const tx = await signer.sendTransaction({
+          from: address,
+          to: recipientAddress,
+          value: ethers.utils.parseEther(sendAmount)
+        });
+
+        // Wait for the transaction to be mined
+        const receipt = await tx.wait();
+        
         setTransactionStep(3)
+        notify("LYX transferred", NotificationType.Success)
         setSelectedAsset(initialAssetState)
         setRecipientAddress('')
         setIsNFTSelected(false)
@@ -137,9 +143,9 @@ const Transfer = () => {
             setIsTransferInitiated(false)
           } else {
             // Handle other errors
-            console.log("ERROR TRANSFERRING LSP8 ASSET", err);
+            console.log("ERROR TRANSFERRING LYX ASSET", err);
             setIsTransferInitiated(true)
-            notify("Error Transferring LSP8 Asset", NotificationType.Error);
+            notify("Error Transferring LYX Asset", NotificationType.Error);
             setTransactionStep(4);
           }
         } else {
@@ -149,40 +155,83 @@ const Transfer = () => {
         }
       }
     } else {
-      try {
-        setTransactionStep(2)
-        const amount = ethers.utils.parseUnits(sendAmount, 'ether');
-      
-        const transaction = await LSP7contract.transfer(address, recipientAddress, amount, safeTransfer, '0x');
-        setIsTransferInitiated(true)
-        await transaction.wait();
-        notify("Token transferred", NotificationType.Success)
-        setTransactionStep(3)
-        setSelectedAsset(initialAssetState)
-        setRecipientAddress('')
-        setSendAmount('')
-        setEverythingFilled(false)
-      } catch (err) {
-        // First, check if err is an object and has a 'code' property
-        if (typeof err === 'object' && err !== null && 'code' in err) {
-          // Now TypeScript knows err is an object and has a 'code' property
-          const errorCode = (err as { code: unknown }).code;
-          if (errorCode === 4001) {
-            // Handle user's rejection
-            console.log("User declined the transaction");
-            notify("Signature Declined", NotificationType.Error);
-            setIsTransferInitiated(false)
+
+      if (!isValidEthereumAddress(selectedAsset?.Address)) {
+        notify("Invalid token", NotificationType.Error)
+        return;
+      }
+
+      if (isNFTSelected) {
+        try {
+          setIsTransferInitiated(true)
+          setTransactionStep(2)
+          const transaction = await LSP8contract.transfer(address, recipientAddress, numberToBytes32(Number(selectedTokenId)), safeTransfer, '0x');
+          await transaction.wait();
+          notify("NFT transferred", NotificationType.Success)
+          setTransactionStep(3)
+          setSelectedAsset(initialAssetState)
+          setRecipientAddress('')
+          setIsNFTSelected(false)
+          setEverythingFilled(false)
+        } catch (err) {
+          // First, check if err is an object and has a 'code' property
+          if (typeof err === 'object' && err !== null && 'code' in err) {
+            // Now TypeScript knows err is an object and has a 'code' property
+            const errorCode = (err as { code: unknown }).code;
+            if (errorCode === 4001) {
+              // Handle user's rejection
+              console.log("User declined the transaction");
+              notify("Signature Declined", NotificationType.Error);
+              setIsTransferInitiated(false)
+            } else {
+              // Handle other errors
+              console.log("ERROR TRANSFERRING LSP8 ASSET", err);
+              setIsTransferInitiated(true)
+              notify("Error Transferring LSP8 Asset", NotificationType.Error);
+              setTransactionStep(4);
+            }
           } else {
-            // Handle other errors
-            console.log("ERROR TRANSFERRING LSP7 ASSET", err);
-            setIsTransferInitiated(true)
-            notify("Error Transferring LSP7 Asset", NotificationType.Error);
+            // Handle the case where err is not an object or doesn't have 'code'
+            console.log("An unexpected error occurred", err);
             setTransactionStep(4);
           }
-        } else {
-          // Handle the case where err is not an object or doesn't have 'code'
-          console.log("An unexpected error occurred", err);
-          setTransactionStep(4);
+        }
+      } else {
+        try {
+          setTransactionStep(2)
+          const amount = ethers.utils.parseUnits(sendAmount, 'ether');
+        
+          const transaction = await LSP7contract.transfer(address, recipientAddress, amount, safeTransfer, '0x');
+          setIsTransferInitiated(true)
+          await transaction.wait();
+          notify("Token transferred", NotificationType.Success)
+          setTransactionStep(3)
+          setSelectedAsset(initialAssetState)
+          setRecipientAddress('')
+          setSendAmount('')
+          setEverythingFilled(false)
+        } catch (err) {
+          // First, check if err is an object and has a 'code' property
+          if (typeof err === 'object' && err !== null && 'code' in err) {
+            // Now TypeScript knows err is an object and has a 'code' property
+            const errorCode = (err as { code: unknown }).code;
+            if (errorCode === 4001) {
+              // Handle user's rejection
+              console.log("User declined the transaction");
+              notify("Signature Declined", NotificationType.Error);
+              setIsTransferInitiated(false)
+            } else {
+              // Handle other errors
+              console.log("ERROR TRANSFERRING LSP7 ASSET", err);
+              setIsTransferInitiated(true)
+              notify("Error Transferring LSP7 Asset", NotificationType.Error);
+              setTransactionStep(4);
+            }
+          } else {
+            // Handle the case where err is not an object or doesn't have 'code'
+            console.log("An unexpected error occurred", err);
+            setTransactionStep(4);
+          }
         }
       }
     }
@@ -192,7 +241,7 @@ const Transfer = () => {
   }
 
   return (
-    <div className="flex sm:flex-col lg:flex-row w-full justify-center sm:pt-12 lg:pt-32">
+    <div className={`flex sm:flex-col lg:flex-row w-full justify-center sm:pt-12 lg:pt-32`}>
         <div className={`flex flex-col gap-10 py-6 px-12 bg-white shadow rounded-15 ${isTransferInitiated && "px-32"}`}>
           {isTransferInitiated ? (
             <div className="flex mt-48">
@@ -238,13 +287,13 @@ const Transfer = () => {
     
                           {isDropDownOpen && (
                             tokenBalances ? (
-                              <div className="absolute inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
-                                <div className="flex flex-col bg-background gap-8 p-4 rounded-10 shadow">
+                              <div className="absolute inset-0 sm:h-[150vh] base:h-[149vh] lg:h-[127vh] bg-black bg-opacity-50 z-50 flex h-full justify-center items-center">
+                                <div className="flex flex-col bg-background gap-8 p-4 lg:ml-[250px] sm:mt-[200px] lg:mt-[-150px] rounded-10 shadow">
                                   <div className="flex w-full justify-evenly items-center text-purple font-bold">
                                     <div className="w-full text-center text-medium">Select asset to send</div>
                                     <div className="hover:cursor-pointer" onClick={() => {setIsDropDownOpen(false)}}>X</div>
                                   </div>
-                                  <div className="flex flex-col md:flex-row justify-between gap-4">
+                                  <div className="flex flex-col keymanager:flex-row justify-between gap-4">
                                     <TokenType tokenType={tokenType} setTokenType={setTokenType} />
                                     <SearchBar placeholder="search tokens..." onSearch={value => setSearchQuery(value)} />
                                   </div>
@@ -252,28 +301,32 @@ const Transfer = () => {
                                     {
                                       tokenType === "LSP7" ? 
                                         filteredLSP7Tokens.map((token, index) => (
-                                          <div 
-                                            key={index}
-                                            className="flex cursor-pointer px-2 py-4 transition border-b border-lightPurple border-opacity-25"
+                                          <div key={index} className="flex w-full justify-between items-center border-b border-lightPurple border-opacity-25 pr-6 hover:cursor-pointer"
                                             onClick={() => {
                                               setIsDropDownOpen(false);
                                               setSelectedAsset(prevState => ({
                                                 ...prevState,
                                                 Name: token.Name,
                                                 Address: token.Address,
+                                                TokenAmount: token.TokenAmount
                                               }));
                                               setIsNFTSelected(false);
                                             }}
                                           >
-                                            {token.Name}
+                                            <div 
+                                              className="flex cursor-pointer px-2 py-4 transition"
+                                            >
+                                              {token.Name}
+                                            </div>
+                                            <div>
+                                              {Number(token.TokenAmount).toFixed(2)}
+                                            </div>
                                           </div>
                                         ))
                                       :
                                         filteredLSP8Tokens.flatMap((token, index) => 
                                           token.TokenID.map((tokenId, tokenIdIndex) => (
-                                            <div 
-                                              key={`${index}-${tokenIdIndex}`}
-                                              className="flex cursor-pointer px-2 py-4 transition border-b border-lightPurple border-opacity-25"
+                                            <div key={`${index}-${tokenIdIndex}`} className="flex w-full justify-between items-center border-b border-lightPurple border-opacity-25 pr-6 hover:cursor-pointer"
                                               onClick={() => {
                                                 setIsDropDownOpen(false);
                                                 setSelectedAsset(prevState => ({
@@ -285,8 +338,12 @@ const Transfer = () => {
                                                 setSelectedTokenId(tokenId);
                                                 setIsNFTSelected(true);
                                               }}
-                                            >
-                                              {`${token.Name} - Token ID ${tokenId}`}
+                                              >
+                                              <div 
+                                                className="flex cursor-pointer px-2 py-4 transition border-b border-lightPurple border-opacity-25"
+                                              >
+                                                {`${token.Name} - Token ID ${tokenId}`}
+                                              </div>
                                             </div>
                                           ))
                                         )
@@ -309,6 +366,7 @@ const Transfer = () => {
                         <div className={`flex flex-col gap-2 ${isNFTSelected ? "pointer-events-none opacity-50" : "opacity-100"}`}>
                           <h1 className="text-lightPurple font-bold">Amount</h1>
                           <input type="number" placeholder="Enter amount..." onChange={(e) => {setSendAmount(e.target.value)}} className="border border-lightPurple border-opacity-50 focus:outline-purple px-4 text-xsmall rounded-10 py-4"/>
+                          <div className="text-purple pt-2">Balance: {Number(selectedAsset.TokenAmount).toFixed(2)}</div>
                         </div>
                         
                         <div className="flex gap-2 items-center">
