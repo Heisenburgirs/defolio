@@ -18,6 +18,7 @@ import LSP8ABI from '@lukso/lsp-smart-contracts/artifacts/LSP8IdentifiableDigita
 import { numberToBytes32 } from "@/app/utils/useBytes32";
 import Tooltip from '@mui/material/Tooltip';
 import TransactionModal from "../modal/TransactionModal";
+import LSP7Mintable from '@lukso/lsp-smart-contracts/artifacts/LSP7Mintable.json';
 
 const Transfer = () => {
   const { address, isConnected } = useAccount();
@@ -104,7 +105,7 @@ const Transfer = () => {
     // Check if recipientAddress is a valid Ethereum address
     if (!isValidEthereumAddress(recipientAddress)) {
       notify("Invalid recipient", NotificationType.Error)
-      return;
+      return; 
     }
 
     const provider = new ethers.providers.Web3Provider(window.lukso);
@@ -136,9 +137,9 @@ const Transfer = () => {
             setIsTransferInitiated(false)
           } else {
             // Handle other errors
-            console.log("ERROR TRANSFERRING ASSET", err);
+            console.log("ERROR TRANSFERRING LSP8 ASSET", err);
             setIsTransferInitiated(true)
-            notify("Error Transferring Asset", NotificationType.Error);
+            notify("Error Transferring LSP8 Asset", NotificationType.Error);
             setTransactionStep(4);
           }
         } else {
@@ -151,7 +152,7 @@ const Transfer = () => {
       try {
         setTransactionStep(2)
         const amount = ethers.utils.parseUnits(sendAmount, 'ether');
-        
+      
         const transaction = await LSP7contract.transfer(address, recipientAddress, amount, safeTransfer, '0x');
         setIsTransferInitiated(true)
         await transaction.wait();
@@ -173,9 +174,9 @@ const Transfer = () => {
             setIsTransferInitiated(false)
           } else {
             // Handle other errors
-            console.log("ERROR TRANSFERRING ASSET", err);
+            console.log("ERROR TRANSFERRING LSP7 ASSET", err);
             setIsTransferInitiated(true)
-            notify("Error Transferring Asset", NotificationType.Error);
+            notify("Error Transferring LSP7 Asset", NotificationType.Error);
             setTransactionStep(4);
           }
         } else {
@@ -187,8 +188,7 @@ const Transfer = () => {
     }
   }
 
-  const test = () => {
-    console.log(safeTransfer)
+  const test = async () => {
   }
 
   return (
@@ -201,6 +201,9 @@ const Transfer = () => {
                 onBackButtonClick={() => {setIsTransferInitiated(false)}} 
                 transactionStep={transactionStep}
                 setTransactionStep={setTransactionStep}
+                message1='Waiting for Confirmation'
+                message2='Transaction Submitted'
+                message3='Transaction Successful'
               />
             </div>
           )

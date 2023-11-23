@@ -21,7 +21,7 @@ import externalLink from '@/public/icons/externalLink.svg';
 import { copyToClipboard } from "@/app/utils/useCopyToCliptboard";
 import lsp3ProfileSchema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.json' assert { type: 'json' };
 import LSP1UniversalReceiverDelegateVault from '@lukso/lsp-smart-contracts/artifacts/LSP1UniversalReceiverDelegateVault.json';
-import { ERC725YDataKeys } from '@lukso/lsp-smart-contracts/constants.js';
+import { ERC725YDataKeys, PERMISSIONS } from '@lukso/lsp-smart-contracts/constants.js';
 
 const Vault = () => {
   const { address, isConnected } = useAccount()
@@ -116,30 +116,33 @@ const Vault = () => {
       const deployVault = await vaultFactory.connect(signer).deploy(address);
 
       // vault address
-      const deployedVaultAddress = deployVault.address
-      console.log("Vault deployed: ", deployVault.address)
+      const awaitVault = await deployVault.deployTransaction.wait();
+      const vaultAddress = awaitVault.contractAddress
+      console.log("Vault deployed: ", vaultAddress)
 
       try {
         setTransactionStep(2)
         const vaultURD = await vaultURDFactory.connect(signer).deploy();
         console.log("vaultURD", vaultURD)
+
         // URD address
-        const URDaddress = vaultURD.address;
+        const awaitURD = await vaultURD.deployTransaction.wait();
+        const URDaddress = awaitURD.contractAddress;
         console.log("URDaddress", URDaddress)
 
         // Deployed vault interface
-        const vault = new ethers.Contract(deployedVaultAddress, LSP9Vault.abi);
+        const vault = new ethers.Contract(vaultAddress, LSP9Vault.abi);
 
         // Encode
         const setDataCalldata = vault.interface.encodeFunctionData('setData', [
           ERC725YDataKeys.LSP1.LSP1UniversalReceiverDelegate,
-          URDaddress,
+          URDaddress, 
         ]);
         console.log(setDataCalldata)
 
-        const setURD = await myUniversalProfile.connect(signer).execute(
+        const setURD = await myUniversalProfile.execute(
           0,
-          deployedVaultAddress,
+          vaultAddress,
           0,
           setDataCalldata,
         );
@@ -148,7 +151,6 @@ const Vault = () => {
 
         try {
           setIsSettingData(true)
-          const targetVaultAddress = deployVault.address;
 
           const existingData = await myErc725Contract.fetchData(`VaultsDeployed[]`);
 
@@ -166,19 +168,19 @@ const Vault = () => {
           }
 
           // Now existingVaultsArray is definitely an array, so we can spread it
-          const updatedVaults = [...existingVaultsArray, targetVaultAddress];
+          const updatedVaults = [...existingVaultsArray, vaultAddress];
 
           const data = erc725.encodeData([
             {
               keyName: 'VaultsDeployed[]',
-              value: [targetVaultAddress],
+              value: updatedVaults,
             }
           ]);
 
           const data2 = erc7255.encodeData([
             {
               keyName: "VaultName:<address>",
-              dynamicKeyParts: targetVaultAddress,
+              dynamicKeyParts: vaultAddress,
               value: name,
             }
           ]);
@@ -186,7 +188,7 @@ const Vault = () => {
           const data3 = erc72555.encodeData([
             {
               keyName: "VaultDescription:<address>",
-              dynamicKeyParts: targetVaultAddress,
+              dynamicKeyParts: vaultAddress,
               value: desc,
             }
           ]);
@@ -272,16 +274,19 @@ const Vault = () => {
     } 
   }
 
-  const test = async() => {
-    const erc725js = new ERC725(lsp3ProfileSchema as ERC725JSONSchema[], "0x21BE2f78D9B1A541D223a388df3C1d9d915996E0", 'https://rpc.testnet.lukso.gateway.fm',
-      {
-        ipfsGateway: 'https://api.universalprofile.cloud/ipfs',
-      },
+  const test1 = async() => {
+    const provider = new ethers.providers.Web3Provider(window.lukso);
+    const signer = provider.getSigner();
+    const vaultURDFactory = new ethers.ContractFactory(
+      LSP1UniversalReceiverDelegateVault.abi,
+      LSP1UniversalReceiverDelegateVault.bytecode,
     );
 
-    const receivedAssetsDataKey = await erc725js.fetchData('LSP5ReceivedAssets[]');
+    const URD = await vaultURDFactory.connect(signer).deploy();
 
-    console.log(receivedAssetsDataKey)
+    const contractAddress = await URD.deployTransaction.wait();
+    
+    console.log(contractAddress)
   }
 
   return (
@@ -438,7 +443,7 @@ const Vault = () => {
                   </div>
                   <button 
                     className={
-                      `py-2 px-6 bg-lightPurple bg-opacity-75 text-medium rounded-15 text-white transition
+                      `py-2 px-12 bg-lightPurple bg-opacity-75 text-medium rounded-15 text-white transition
                       ${hasProvidedName && hasProvidedDesc ? 'bg-purple bg-opacity-100' : 'cursor-not-allowed opacity-50'}`
                     }
                     onClick={deployVault}
@@ -446,7 +451,6 @@ const Vault = () => {
                   >
                     Finalize Vault
                   </button>
-                  <div onClick={getData}>test</div>
                 </div>
               </>
             )
@@ -456,7 +460,7 @@ const Vault = () => {
             <>
               <title>Vaults</title>
               <div className="flex w-full justify-between">
-                <h1 onClick={test} className="text-medium text-purple font-bold">Your Vaults</h1>
+                <h1 className="text-medium text-purple font-bold">Your Vaults</h1>
                 <div onClick={() => { if (isConnected) setAddVault(true) }} className="w-[135px] py-2 px-4 rounded-15 text-xsmall border border-lightPurple text-purple font-bold hover:cursor-pointer hover:bg-purple hover:text-white transition">
                   Create a Vault
                 </div>
@@ -466,7 +470,10 @@ const Vault = () => {
                   <div key={index} className="w-[250px] h-[250px] border border-lightPurple rounded-15 py-6 px-4 flex flex-col justify-between">
                     <div className="flex flex-col gap-2">
                       <div className="text-medium text-purple font-bold">{vault.name}</div>
-                      <div className="text-purple text-xsmall font-bold opacity-75">{formatAddress(vault.contract)}</div>
+                      <div className="flex items-center gap-2 hover:cursor-pointer" onClick={() => {copyToClipboard(vault.contract); notify("Vault Copied!", NotificationType.Success)}}>
+                        <div className="text-purple text-xsmall font-bold opacity-75">{formatAddress(vault.contract)}</div>
+                        <Image src={copy} width={12} height={12} alt="Copy vault address" />
+                      </div>
                       <div className="text-purple text-xsmall font-bold opacity-75">{vault.desc}</div>
                     </div>
                     <div className="w-full text-center py-2 rounded-15 border border-lightPurple text-purple hover:cursor-pointer hover:bg-lightPurple hover:text-white transition">Manage</div>

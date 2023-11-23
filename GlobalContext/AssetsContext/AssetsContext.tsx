@@ -88,8 +88,6 @@ export const AssetsProvider: React.FC<AssetsProviderProps> = ({ children }) => {
 
         if (Array.isArray(receivedAssetsDataKey.value)) {
 
-          const contractAddress = receivedAssetsDataKey.value
-
           // Assuming receivedAssetsDataKey.value is an array of contract addresses
           const contractAddresses = receivedAssetsDataKey.value;
 
