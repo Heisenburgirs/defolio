@@ -96,6 +96,13 @@ const Transfer = () => {
   const transfer = async () => {
     if (selectedAsset)
 
+    if (selectedAsset.Address != "0x") {
+      if (!isValidEthereumAddress(selectedAsset?.Address)) {
+        notify("Invalid token", NotificationType.Error)
+        return;
+      }
+    }
+
     // Check if recipientAddress is a valid Ethereum address
     if (!isValidEthereumAddress(recipientAddress)) {
       notify("Invalid recipient", NotificationType.Error)
@@ -103,19 +110,21 @@ const Transfer = () => {
     }
 
     // Compare to balance
-    if (sendAmount >= selectedAsset.TokenAmount) {
+    if (Number(sendAmount) >= Number(selectedAsset.TokenAmount)) {
       notify("Amount Exceeds Balance", NotificationType.Error)
       return; 
     }
+
+    
 
     const provider = new ethers.providers.Web3Provider(window.lukso);
     const signer = provider.getSigner();
     const LSP8contract = new ethers.Contract(selectedAsset.Address, LSP8ABI.abi, signer);
     const LSP7contract = new ethers.Contract(selectedAsset.Address, LSP7ABI.abi, signer);
 
+    setIsTransferInitiated(true)
     if (selectedAsset.Address === "0x") {
       try {
-        setIsTransferInitiated(true)
         const tx = await signer.sendTransaction({
           from: address,
           to: recipientAddress,
@@ -155,16 +164,8 @@ const Transfer = () => {
         }
       }
     } else {
-
-      if (!isValidEthereumAddress(selectedAsset?.Address)) {
-        notify("Invalid token", NotificationType.Error)
-        return;
-      }
-
       if (isNFTSelected) {
         try {
-          setIsTransferInitiated(true)
-          setTransactionStep(2)
           const transaction = await LSP8contract.transfer(address, recipientAddress, numberToBytes32(Number(selectedTokenId)), safeTransfer, '0x');
           await transaction.wait();
           notify("NFT transferred", NotificationType.Success)
@@ -198,7 +199,6 @@ const Transfer = () => {
         }
       } else {
         try {
-          setTransactionStep(2)
           const amount = ethers.utils.parseUnits(sendAmount, 'ether');
         
           const transaction = await LSP7contract.transfer(address, recipientAddress, amount, safeTransfer, '0x');

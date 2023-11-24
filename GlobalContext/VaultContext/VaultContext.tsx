@@ -40,7 +40,9 @@ export const VaultProvider: React.FC<VaultProviderProps> = ({ children }) => {
   const { data, isError } = useBalance({
     address: address,
   })
-  
+
+  const web3 = new Web3("https://rpc.testnet.lukso.network");
+
   const [vaults, setVaults] = useState<VaultObject[]>(initialState.vaults);
 
   useEffect(() => {
@@ -57,21 +59,6 @@ export const VaultProvider: React.FC<VaultProviderProps> = ({ children }) => {
         } else if (typeof fetchAddressResponse.value === 'string') {
           addresses = [fetchAddressResponse.value]; // If it's a single string, make it an array
         }
-
-        const response = await fetch('/api/coinmarketcap');
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        const responsePrice = await response.json();
-
-        const lyxPrice = Number(responsePrice)
-
-        const balanceValue = data?.formatted && !isNaN(Number(data.formatted)) 
-        ? Number(data.formatted) 
-        : 0;
-        const totalPriceLYX = balanceValue * lyxPrice;
 
         // Prepare to fetch details for each vault
         const vaultNames = new ERC725(VaultName, address, "https://rpc.testnet.lukso.network");
@@ -137,7 +124,7 @@ export const VaultProvider: React.FC<VaultProviderProps> = ({ children }) => {
     
                 // Fetching balance for the given user address (replace with actual user address)
                 // @ts-ignore
-                const balance = await lsp7Contract.methods.balanceOf(address).call();
+                const balance = await lsp7Contract.methods.balanceOf(vaultAddress).call();
     
                 // Fetching token name and symbol
                 const digitalAssetMetadataSymbol = await myerc725.fetchData('LSP4TokenSymbol');
@@ -170,14 +157,14 @@ export const VaultProvider: React.FC<VaultProviderProps> = ({ children }) => {
                     // In case contract doesn't have decimals, we see if it ha balanceOf.
                     // If it does, it's LSP8
                     // @ts-ignore
-                    const balanceOf = await lsp8Contract.methods.balanceOf(address).call();
+                    const balanceOf = await lsp8Contract.methods.balanceOf(vaultAddress).call();
       
                     // @ts-ignore
                     const balanceOfStr = balanceOf.toString()
       
                     // Set tokenID
                     // @ts-ignore
-                    const tokenIdsBytes32 = await lsp8Contract.methods.tokenIdsOf(address).call();
+                    const tokenIdsBytes32 = await lsp8Contract.methods.tokenIdsOf(vaultAddress).call();
       
                     //console.log("tokenIdsBytes32", tokenIdsBytes32)
                     
@@ -203,6 +190,10 @@ export const VaultProvider: React.FC<VaultProviderProps> = ({ children }) => {
                   }
                 }
               }
+
+              const balance = await web3.eth.getBalance(vaultAddress);
+              const result = { address: vaultAddress, balance: balance };
+              const balanceInEther = ethers.utils.formatEther(result.balance);
     
               const modifiedTokenBalances: TokenBalances = {
                 LSP7: [
@@ -211,9 +202,9 @@ export const VaultProvider: React.FC<VaultProviderProps> = ({ children }) => {
                     Address: '0x',
                     Name: 'Lukso',
                     Symbol: 'LYX',
-                    Price: lyxPrice.toString(),
-                    TokenAmount: balanceValue.toString(),
-                    TokenValue: totalPriceLYX.toString(),
+                    Price: '',
+                    TokenAmount: balanceInEther.toString(),
+                    TokenValue: '',
                     TokenID: [''] // Leave empty for now
                   },
                   // Then, add LSP7 holdings

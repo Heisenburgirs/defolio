@@ -336,18 +336,27 @@ const Vault = () => {
                   <Image src={copy} width={12} height={12} alt="Copy vault address" />
                 </div>
               </div>
-              <div className="flex sm:flex-col keymanager:flex-row sm:gap-4 keymanager:gap-0 w-full justify-between">
-                <TokenType tokenType={tokenType} setTokenType={setTokenType}/>
-                <SearchBar placeholder="Search for a token..." onSearch={value => setSearchQuery(value)} />
+              <div className="flex sm:flex-col md:flex-row sm:gap-4 md:gap-0 w-full justify-between">
+                <div className="flex gap-4 sm:flex-col base:flex-row">
+                  <TokenType tokenType={tokenType} setTokenType={setTokenType}/>
+                  <div className="keymanager:hidden text-center py-2 px-4 text-lightPurple border border-lightPurple hover:bg-lightPurple hover:text-white transition hover:cursor-pointer rounded-15">Controllers</div>
+                </div>
+                <div className="flex gap-4 sm:flex-col base:flex-row">
+                  <div className="sm:hidden keymanager:flex text-center py-2 px-4 text-lightPurple border border-lightPurple hover:bg-lightPurple hover:text-white transition hover:cursor-pointer rounded-15">Controllers</div>
+                  <SearchBar placeholder="Search for a token..." onSearch={value => setSearchQuery(value)} />
+                </div>
               </div>
 
               <div className="flex flex-col w-full gap-2">
                 <div className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12">
-                  <div className="flex w-full justify-between">
-                    <div className="sm:col-span-2 text-purple font-normal opacity-75 flex">
+                  <div className="grid sm:grid-cols-4 lg:grid-cols-12">
+                    <div className="sm:col-span-2 base:col-span-1 lg:col-span-4 text-purple font-normal opacity-75 flex">
                       Token
                     </div>
-                    <div className="flex w-full justify-end text-purple font-normal opacity-75 flex">
+                    <div className="sm:hidden base:justify-end md:justify-center lg:justify-start base:flex sm:col-span-1 lg:col-span-4 text-purple font-normal opacity-75">
+                      Price
+                    </div>
+                    <div className="base:justify-end lg:justify-start sm:col-span-1 lg:col-span-3 text-purple font-normal opacity-75 flex">
                       Balance
                     </div>
                     <div className="sm:col-span-1 lg:col-span-1"></div>
@@ -370,14 +379,22 @@ const Vault = () => {
                   (
                     (tokenType === "LSP7" ? safeFilteredLSP7Tokens : safeFilteredLSP8Tokens).map((token, index) => (
                       <div key={index} className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12 py-2">
-                        <div className="flex w-full justify-between items-center">
-                          <div className="flex items-center gap-4 text-purple font-normal opacity-75">
+                        <div className="grid sm:grid-cols-4 lg:grid-cols-12 items-center">
+                          <div className="flex items-center gap-4 sm:col-span-2 base:col-span-1 lg:col-span-4 text-purple font-normal opacity-75">
                             <div className="flex flex-col">
                               <div className="text-small font-bold">{token.Name}</div>
                               <div className="text-xsmall opacity-75">{token.Symbol}</div>
                             </div>
                           </div>
-                          <div onClick={() => handleDropdownClick(index)} className="relative flex flex-col gap-2 pr-2 w-full items-end justify-end hover:cursor-pointer">
+                          <div className="base:justify-end md:justify-center lg:justify-start sm:hidden base:flex sm:col-span-1 lg:col-span-4 text-purple font-normal opacity-75 flex">
+                            <div className="font-bold">
+                               ...
+                            </div>
+                          </div>
+                          <div className="flex flex-col base:items-end lg:items-start sm:col-span-1 lg:col-span-3 text-purple font-normal opacity-75">
+                            <div className="font-bold">{balanceVisible ? (parseFloat(token.TokenAmount) % 1 === 0 ? parseInt(token.TokenAmount, 10) : parseFloat(token.TokenAmount).toFixed(2)) : "***"}</div>
+                          </div>
+                          <div onClick={() => handleDropdownClick(index)} className="relative flex flex-col gap-2 sm:col-span-1 lg:col-span-1 pr-2 w-full items-end justify-end hover:cursor-pointer">
                             <div className="w-[3px] h-[3px] rounded-[99px] bg-lightPurple bg-opacity-75"></div>
                             <div className="w-[3px] h-[3px] rounded-[99px] bg-lightPurple bg-opacity-75"></div>
                             <div className="w-[3px] h-[3px] rounded-[99px] bg-lightPurple bg-opacity-75"></div>
