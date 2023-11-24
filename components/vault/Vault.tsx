@@ -41,10 +41,11 @@ interface VaultObject {
 
 const Vault = () => {
   const { address, isConnected } = useAccount();
-  const { vaults, setVaults } = useVault();
+  const { vaults, setIndex } = useVault();
   const [isLoading, setIsLoading] = useState(false);
   const [isSettingData, setIsSettingData] = useState(false);
   const [settings, setSettings] = useState(false);
+  const [isSettingsUpdating, setIsSettingsUpdating] = useState(false)
 
   // Settings
   const [updatedVaultName, setUpdatedVaultName] = useState<string>("")
@@ -56,8 +57,6 @@ const Vault = () => {
   const [arePermissionsChanged, setArePermissionsChanged] = useState(false)
   const [isChangePermissionInitiated, setIsChangePermissionInitiated] = useState(false);
   const [controllerAddresses, setControllerAddresses] = useState<{ address: string, permissions: string[] }[]>([]);
-
-  const { setIndex } = useKeymanager()
 
   // Add Controller to Vault
   const [isAdditionInitiated, setIsAdditionInitiated] = useState(false);
@@ -767,7 +766,7 @@ const Vault = () => {
     const signer = provider.getSigner();
     const myUniversalProfile = new ethers.Contract(address || '', UniversalProfile.abi, signer);
 
-    setIsAdditionInitiated(true)
+    setIsSettingsUpdating(true)
     
     try {
 
@@ -848,7 +847,7 @@ const Vault = () => {
       }
     ]);
 
-    setIsAdditionInitiated(true)
+    setIsSettingsUpdating(true)
 
     try {
       const setData = await myUniversalProfile.setDataBatch(data.keys, data.values);
@@ -887,25 +886,27 @@ const Vault = () => {
         {isManage ? (
           <>
             <title>Manage Vault</title>
-            <div
-              className="flex gap-2 px-4 items-center text-lightPurple hover:text-purple hover:cursor-pointer transition text-small"
-              onMouseEnter={() => setHover(true)}
-              onMouseLeave={() => setHover(false)}
-              onClick={() => {settings ? setSettings(false) : addController ? setAddController(false) : isController ? setIsController(false) : setIsManage(false)}}
-            >
-              <div 
-                className="transition ease-in-out duration-200"
+            { !isSettingsUpdating &&
+              <div
+                className="flex gap-2 px-4 items-center text-lightPurple hover:text-purple hover:cursor-pointer transition text-small"
+                onMouseEnter={() => setHover(true)}
+                onMouseLeave={() => setHover(false)}
+                onClick={() => {settings ? setSettings(false) : addController ? setAddController(false) : isController ? setIsController(false) : setIsManage(false)}}
               >
-                <Image 
-                  src={hover ? purpleArrow : lightPurpleArrow} 
-                  width={24} 
-                  height={24} 
-                  alt="Back"
-                  className="hover:cursor-pointer"
-                />
+                <div 
+                  className="transition ease-in-out duration-200"
+                >
+                  <Image 
+                    src={hover ? purpleArrow : lightPurpleArrow} 
+                    width={24} 
+                    height={24} 
+                    alt="Back"
+                    className="hover:cursor-pointer"
+                  />
+                  </div>
+                <div>Back</div>
               </div>
-              <div>Back</div>
-            </div>
+            }
             {addController ? (
               isAdditionInitiated ? (
                 <TransactionModal
@@ -973,33 +974,47 @@ const Vault = () => {
             (
               
               settings ? (
-                <div className="flex w-full h-full flex-col pl-4 gap-12">
-                  <div className="flex flex-col gap-8">
-                    <h1 className="text-purple font-bold text-large">Settings</h1>
-                    <div className="flex flex-col gap-2">
-                      <h1 className="text-lightPurple font-bold">Name</h1>
-                      <input 
-                        type="text"
-                        placeholder={selectedVault?.name || "Enter name..."}
-                        className="px-4 py-2 sm:w-[200px] base:w-[350px] md:w-[500px] border border-lightPurple rounded-15 focus:outline-purple"
-                        onChange={(e) => {setUpdatedVaultName(e.target.value)}}
-                      />
+                isSettingsUpdating ? (
+                  <TransactionModal
+                    successMsg='Vault Successfully Edited'
+                    onBackButtonClick={() => {setIsSettingsUpdating(false); setTransactionStep(1); setSettings(false)}} 
+                    transactionStep={transactionStep}
+                    setTransactionStep={setTransactionStep}
+                    message1='Editing Vault'
+                    message2={""}
+                    message3='Transaction Successful'
+                  />
+                )
+                :
+                (
+                  <div className="flex w-full h-full flex-col pl-4 gap-12">
+                    <div className="flex flex-col gap-8">
+                      <h1 className="text-purple font-bold text-large">Settings</h1>
+                      <div className="flex flex-col gap-2">
+                        <h1 className="text-lightPurple font-bold">Name</h1>
+                        <input 
+                          type="text"
+                          placeholder={selectedVault?.name || "Enter name..."}
+                          className="px-4 py-2 sm:w-[200px] base:w-[350px] md:w-[500px] border border-lightPurple rounded-15 focus:outline-purple"
+                          onChange={(e) => {setUpdatedVaultName(e.target.value)}}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <h1 className="text-lightPurple font-bold">Description</h1>
+                        <textarea
+                          placeholder={selectedVault?.desc || "Enter description..."}
+                          className="px-4 py-2 sm:w-[200px] base:w-[350px] md:w-[500px] border border-lightPurple rounded-15 focus:outline-purple"
+                          onChange={(e) => {setUpdatedVaultDesc(e.target.value)}}
+                        />
+                      </div>
+                      <button onClick={() => {updateProfile(selectedVault?.contract || "")}} className="text-lightPurple border border-lightPurple rounded-15 hover:cursor-pointer hover:bg-purple hover:text-white transition py-2 w-[150px]">Update Profile</button>
                     </div>
-                    <div className="flex flex-col gap-2">
-                      <h1 className="text-lightPurple font-bold">Description</h1>
-                      <textarea
-                        placeholder={selectedVault?.desc || "Enter description..."}
-                        className="px-4 py-2 sm:w-[200px] base:w-[350px] md:w-[500px] border border-lightPurple rounded-15 focus:outline-purple"
-                        onChange={(e) => {setUpdatedVaultDesc(e.target.value)}}
-                      />
+                    <div className="flex flex-col gap-4">
+                      <div className="text-small text-red font-bold">DANGER ZONE</div>
+                      <div onClick={() => {deleteVault(selectedVault?.contract || "")}} className="text-red border border-red rounded-15 hover:bg-red hover:text-white hover:cursor-pointer transition w-[150px] py-2 px-4 text-center">Delete Vault</div>
                     </div>
-                    <button onClick={() => {updateProfile(selectedVault?.contract || "")}} className="text-lightPurple border border-lightPurple rounded-15 hover:cursor-pointer hover:bg-purple hover:text-white transition py-2 w-[150px]">Update Profile</button>
                   </div>
-                  <div className="flex flex-col gap-4">
-                    <div className="text-small text-red font-bold">DANGER ZONE</div>
-                    <div onClick={() => {deleteVault(selectedVault?.contract || "")}} className="text-red border border-red rounded-15 hover:bg-red hover:text-white hover:cursor-pointer transition w-[150px] py-2 px-4 text-center">Delete Vault</div>
-                  </div>
-                </div>
+                )
               )
               :
               (
