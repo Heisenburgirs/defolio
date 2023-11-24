@@ -10,6 +10,8 @@ import { useEffect, useRef, useState } from "react";
 import Image from 'next/image'
 import lightPurpleArrow from '@/public/icons/lightPurple_arrow.png';
 import purpleArrow from '@/public/icons/purple_arrow.png';
+import lightSettings from '@/public/icons/settings.png';
+import settingsDark from '@/public/icons/settingsDark.png';
 import TransactionModal from "../modal/TransactionModal";
 import { NotificationType, notify } from "../toast/Toast";
 import { useVault } from "@/GlobalContext/VaultContext/VaultContext";
@@ -42,6 +44,12 @@ const Vault = () => {
   const { vaults, setVaults } = useVault();
   const [isLoading, setIsLoading] = useState(false);
   const [isSettingData, setIsSettingData] = useState(false);
+  const [settings, setSettings] = useState(false);
+
+  // Settings
+  const [updatedVaultName, setUpdatedVaultName] = useState<string>("")
+  const [updatedVaultDesc, setUpdatedVaultDesc] = useState("")
+
   // Permissions for Vault
   const [isController, setIsController] = useState(false);
   const [addController, setAddController] = useState<boolean>(false);
@@ -431,14 +439,14 @@ const Vault = () => {
     console.log(selectedVault?.changedPermissions)
     const erc725 = new ERC725(
       LSP6Schema as ERC725JSONSchema[],
-      address,
+      selectedVault?.contract,
       'https://rpc.testnet.lukso.network'
     );
 
     const provider = new ethers.providers.Web3Provider(window.lukso);
     const signer = provider.getSigner();
 
-    const myUniversalProfile = new ethers.Contract(address || '', UniversalProfile.abi, signer);
+    const vault = new ethers.Contract(selectedVault?.contract || '', LSP9Vault.abi, signer);
 
     const controllersWithChanges = selectedVault?.changedPermissions.filter(controller => controller.isChanged);
 
@@ -467,7 +475,7 @@ const Vault = () => {
     const allValues = encodedDataArray?.flatMap(item => item.encodedData.values);
 
     try {
-      const tx = await myUniversalProfile.setDataBatch(allKeys, allValues);
+      const tx = await vault.setDataBatch(allKeys, allValues);
       setIsChangePermissionInitiated(true)
       setTransactionStep(2)
 
@@ -636,7 +644,7 @@ const Vault = () => {
 
     const erc725 = new ERC725(
       LSP6Schema as ERC725JSONSchema[],
-      address,
+      selectedVault?.contract,
       'https://rpc.testnet.lukso.network'
     );
 
@@ -674,10 +682,10 @@ const Vault = () => {
     ]);
 
     //@ts-ignore
-    const myUniversalProfile = new ethers.Contract(address, UniversalProfile.abi, signer);
+    const vault = new ethers.Contract(selectedVault?.contract, LSP9Vault.abi, signer);
 
     try {
-      const tx = await myUniversalProfile.setDataBatch(permissionData.keys, permissionData.values);
+      const tx = await vault.setDataBatch(permissionData.keys, permissionData.values);
       setTransactionStep(2)
 
       const receipt = await tx.wait();
@@ -713,6 +721,166 @@ const Vault = () => {
     }
   }
 
+  const updateProfile = async(vaultAddress: string) => {
+    const erc7255 = new ERC725(
+      VaultName,
+      address,
+      'https://rpc.testnet.lukso.network'
+    );
+
+    const erc72555 = new ERC725(
+      VaultDescription,
+      address,
+      'https://rpc.testnet.lukso.network'
+    );
+
+    let allKeys: string[] = [];
+    let allValues: string[] = [];
+
+    // Encode the vault name data if updatedVaultName is not empty
+    if (updatedVaultName) {
+      const data2 = erc7255.encodeData([
+        {
+          keyName: "VaultName:<address>",
+          dynamicKeyParts: vaultAddress,
+          value: updatedVaultName,
+        }
+      ]);
+      allKeys = [...allKeys, ...data2.keys];
+      allValues = [...allValues, ...data2.values];
+    }
+
+    // Encode the vault description data if updatedVaultDesc is not empty
+    if (updatedVaultDesc) {
+      const data3 = erc72555.encodeData([
+        {
+          keyName: "VaultDescription:<address>",
+          dynamicKeyParts: vaultAddress,
+          value: updatedVaultDesc,
+        }
+      ]);
+      allKeys = [...allKeys, ...data3.keys];
+      allValues = [...allValues, ...data3.values];
+    }
+
+    const provider = new ethers.providers.Web3Provider(window.lukso);
+    const signer = provider.getSigner();
+    const myUniversalProfile = new ethers.Contract(address || '', UniversalProfile.abi, signer);
+
+    setIsAdditionInitiated(true)
+    
+    try {
+
+      if (allKeys.length > 0 && allValues.length > 0) {
+
+      const setData = await myUniversalProfile.setDataBatch(allKeys, allValues);
+
+      const txResult = await setData.wait()
+
+      setIndex(130)
+      setTransactionStep(3)
+
+      setIsAdditionInitiated(true)
+      
+    } else {
+        // Handle the case where neither name nor description is updated
+        notify("No updates to apply", NotificationType.Error);
+      }
+
+    } catch (err) {
+      // First, check if err is an object and has a 'code' property
+      if (typeof err === 'object' && err !== null && 'code' in err) {
+        // Now TypeScript knows err is an object and has a 'code' property
+        const errorCode = (err as { code: unknown }).code;
+        if (errorCode === 4001) {
+          // Handle user's rejection
+          console.log("User declined the transaction");
+          notify("Signature Declined", NotificationType.Error);
+          setIsAdditionInitiated(false)
+          setSelectedPermissions([''])
+        } else {
+          // Handle other errors
+          console.log("ERROR SETTING METADATA", err);
+          setIsAdditionInitiated(true)
+          notify("Error Setting Metadata", NotificationType.Error);
+          setTransactionStep(4);
+          setSelectedPermissions([''])
+        }
+      }
+    }
+  }
+
+  const deleteVault = async(vaultAddress: string) => {
+    const erc725 = new ERC725(
+      VaultSchema,
+      address,
+      'https://rpc.testnet.lukso.network'
+    );
+
+    const provider = new ethers.providers.Web3Provider(window.lukso);
+    const signer = provider.getSigner();
+    const myUniversalProfile = new ethers.Contract(address || '', UniversalProfile.abi, signer);
+    const myErc725Contract = new ERC725(VaultSchema, address, "https://rpc.testnet.lukso.network");
+
+    const existingData = await myErc725Contract.fetchData(`VaultsDeployed[]`);
+
+    let existingVaultsArray: string[];
+
+    // Check if existingVaults is an array and handle accordingly
+    if (Array.isArray(existingData.value)) {
+      existingVaultsArray = existingData.value;
+    } else if (typeof existingData.value === 'string') {
+      // If it's a string, make it an array with that string as the only element
+      existingVaultsArray = [existingData.value];
+    } else {
+      // If it's neither (or the data doesn't exist), start with an empty array
+      existingVaultsArray = [];
+    }
+
+    // Filter out the vaultAddress you want to remove
+    const updatedVaults = existingVaultsArray.filter(address => address !== vaultAddress);
+
+    // Encode the data for updating the UP
+    const data = erc725.encodeData([
+      {
+        keyName: 'VaultsDeployed[]',
+        value: updatedVaults,
+      }
+    ]);
+
+    setIsAdditionInitiated(true)
+
+    try {
+      const setData = await myUniversalProfile.setDataBatch(data.keys, data.values);
+  
+      const txResult = await setData.wait()
+  
+      setIndex(1305)
+      setTransactionStep(3)
+
+    } catch (err) {
+      // First, check if err is an object and has a 'code' property
+      if (typeof err === 'object' && err !== null && 'code' in err) {
+        // Now TypeScript knows err is an object and has a 'code' property
+        const errorCode = (err as { code: unknown }).code;
+        if (errorCode === 4001) {
+          // Handle user's rejection
+          console.log("User declined the transaction");
+          notify("Signature Declined", NotificationType.Error);
+          setIsAdditionInitiated(false)
+          setSelectedPermissions([''])
+        } else {
+          // Handle other errors
+          console.log("ERROR REMOVING VAULT", err);
+          setIsAdditionInitiated(true)
+          notify("Error Removing Vault", NotificationType.Error);
+          setTransactionStep(4);
+          setSelectedPermissions([''])
+        }
+      }
+    }
+  }
+
   return (
     <div className="flex w-full h-full bg-white shadow rounded-15">
       <div className="flex flex-col py-8 px-6 w-full h-full gap-12">
@@ -723,7 +891,7 @@ const Vault = () => {
               className="flex gap-2 px-4 items-center text-lightPurple hover:text-purple hover:cursor-pointer transition text-small"
               onMouseEnter={() => setHover(true)}
               onMouseLeave={() => setHover(false)}
-              onClick={() => {addController ? setAddController(false) : setIsManage(false)}}
+              onClick={() => {settings ? setSettings(false) : addController ? setAddController(false) : isController ? setIsController(false) : setIsManage(false)}}
             >
               <div 
                 className="transition ease-in-out duration-200"
@@ -741,7 +909,7 @@ const Vault = () => {
             {addController ? (
               isAdditionInitiated ? (
                 <TransactionModal
-                  successMsg='Controller Successfuly Updated'
+                  successMsg='Controller Successfuly Set'
                   onBackButtonClick={() => {setAddController(false)}} 
                   transactionStep={transactionStep}
                   setTransactionStep={setTransactionStep}
@@ -753,25 +921,6 @@ const Vault = () => {
               :
               (
                 <>
-                  <div
-                    className="flex gap-2 px-4 items-center text-lightPurple hover:text-purple hover:cursor-pointer transition text-small"
-                    onMouseEnter={() => setHover(true)}
-                    onMouseLeave={() => setHover(false)}
-                    onClick={() => {setAddController(false)}}
-                  >
-                    <div 
-                      className="transition ease-in-out duration-200"
-                    >
-                      <Image 
-                        src={hover ? purpleArrow : lightPurpleArrow} 
-                        width={24} 
-                        height={24} 
-                        alt="Back"
-                        className="hover:cursor-pointer"
-                      />
-                    </div>
-                    <div>Back</div>
-                  </div>
                   <div className="flex flex-col py-6 sm:px-2 lg:px-16 gap-16 justify-center items-center">
                     <div className="flex flex-col gap-4 justify-center items-center">
                       <div className="text-purple font-bold text-medium">Add New Controller</div>
@@ -822,448 +971,95 @@ const Vault = () => {
             )
             :
             (
-            <div className="flex w-full h-full flex-col gap-8 px-4">
-              <div className="flex flex-col gap-6">
-                <div className="flex flex-col gap-2">
-                  <div onClick={() => {console.log(selectedVault)}} className="text-purple font-bold text-large">{selectedVault?.name}</div>
-                  <div className="text-purple">{selectedVault?.desc}</div>
-                </div>
-                <div className="flex gap-2 items-center hover:cursor-pointer opacity-75" onClick={() => {copyToClipboard(selectedVault?.contract); notify("Vault Address Copied", NotificationType.Success)}}>
-                  <div className="text-purple">{formatAddress(selectedVault?.contract || "")}</div>
-                  <Image src={copy} width={12} height={12} alt="Copy vault address" />
-                </div>
-              </div>
-              {isController ? (
-                <>
-                  <div className="flex sm:gap-4 keymanager:gap-0 sm:flex-col keymanager:flex-row w-full keymanager:justify-between keymanager:items-center">
+              
+              settings ? (
+                <div className="flex w-full h-full flex-col pl-4 gap-12">
+                  <div className="flex flex-col gap-8">
+                    <h1 className="text-purple font-bold text-large">Settings</h1>
                     <div className="flex flex-col gap-2">
-                      <div onClick={() => {console.log(selectedVault)}} className="text-medium font-bold text-purple">Controller Permissions</div>
-                      <div className="sm:text-xsmall md:text-small text-purple opacity-90">Remove, add and manage controller permissions</div>
+                      <h1 className="text-lightPurple font-bold">Name</h1>
+                      <input 
+                        type="text"
+                        placeholder={selectedVault?.name || "Enter name..."}
+                        className="px-4 py-2 sm:w-[200px] base:w-[350px] md:w-[500px] border border-lightPurple rounded-15 focus:outline-purple"
+                        onChange={(e) => {setUpdatedVaultName(e.target.value)}}
+                      />
                     </div>
-                    <div onClick={() => { if (isConnected) setAddController(true) }}  className="w-[135px] py-2 px-4 rounded-15 text-xsmall border border-lightPurple text-purple font-bold hover:cursor-pointer hover:bg-purple hover:text-white transition">
-                      Add Controller
+                    <div className="flex flex-col gap-2">
+                      <h1 className="text-lightPurple font-bold">Description</h1>
+                      <textarea
+                        placeholder={selectedVault?.desc || "Enter description..."}
+                        className="px-4 py-2 sm:w-[200px] base:w-[350px] md:w-[500px] border border-lightPurple rounded-15 focus:outline-purple"
+                        onChange={(e) => {setUpdatedVaultDesc(e.target.value)}}
+                      />
                     </div>
+                    <button onClick={() => {updateProfile(selectedVault?.contract || "")}} className="text-lightPurple border border-lightPurple rounded-15 hover:cursor-pointer hover:bg-purple hover:text-white transition py-2 w-[150px]">Update Profile</button>
                   </div>
-                  <PopupButton isVisible={arePermissionsChanged} onReset={handleReset} onConfirm={handleConfirm} controllerAddresses={controllerAddresses.map(controller => controller.address)}/>
-                  <div className="flex flex-col w-full gap-2">
-                    <div className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12">
-                      <div className="flex w-full justify-between items-center">
-                        <div className="text-purple font-bold flex opacity-75">
-                          Controllers
-                        </div>
-                        <div className="text-purple font-bold flex opacity-75">
-                          Permissions
-                        </div>
-                      </div>
-                    </div>
-
-                  {isLoading ? (
-                    <div className="loading opacity-75 w-full flex justify-center items-center p-16">
-                      <span className="loading__dot"></span>
-                      <span className="loading__dot"></span>
-                      <span className="loading__dot"></span>
-                    </div>
-                  )
-                  :
-                  (
-                    selectedVault?.changedPermissions.map((controller, index) => (
-                      <div key={index} className="hidden sm:table-header-group grid grid-cols-12 border border-lightPurple border-opacity-25 rounded-15 py-2 px-4">
-                        <div  className="flex w-full justify-between items-center py-2">
-                          <div className="flex items-center gap-4 sm:col-span-2 base:col-span-1 lg:col-span-5 text-purple font-normal">
-                            <div className="text-small font-bold">{formatAddress(controller.address)}</div>
-                          </div>
-                          <div className="sm:col-span-1 lg:col-span-4 text-purple font-normal flex">
-                            <div onClick={() => {togglePermissionsDropdown(controller.address)}} className="font-bold text-xsmall transition hover:cursor-pointer">show more</div>
-                          </div>
-                        </div> 
-                        {visibilityStates[controller.address] && (
-                          <div 
-                            className={`flex w-full ${dropdownVisible[controller.address] ? 'animate-reveal' : 'animate-conceal'} py-4 transition sm:gap-4 md:gap-2 grid :grid-cols-1 keymanager:grid-cols-2 xl:grid-cols-3 text-xsmall overflow-y-auto hide-scrollbar`}
-                            style={{ animationFillMode: 'forwards' }}
-                          >
-                            <div className="flex flex-col gap-4 py-2">
-                              <div className="font-bold text-[18px] text-purple">
-                                Ownership
-                              </div>
-                              <div className="flex flex-col justify-between gap-8 h-full">
-                                <div className="flex gap-[10px] items-center">
-                                  <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                    <div className="flex w-full justify-between">
-                                      <span className="font-bold opacity-90 text-purple text-xsmall">Change Owner</span>
-                                      <ToggleSwitch 
-                                        isToggled={controller.permissions.CHANGEOWNER}
-                                        onToggle={() => updatePermission(controller.address, 'CHANGEOWNER')} 
-                                        controllerAddress={controller.address}
-                                        permissionKey="CHANGEOWNER"
-                                      />
-                                    </div>
-                                    <span className="opacity-75 text-purple text-xxsmall">Enable the transfer of ownership rights to another address</span>
-                                  </div>
-                                </div>
-                                <div className="flex gap-[10px] items-center">
-                                  <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                    <div className="flex w-full justify-between">
-                                      <span className="font-bold opacity-90 text-purple text-xsmall">Add Controller</span>
-                                      <ToggleSwitch
-                                        isToggled={controller.permissions.ADDCONTROLLER}
-                                        onToggle={() => updatePermission(controller.address, 'ADDCONTROLLER')} 
-                                        controllerAddress={controller.address}
-                                        permissionKey="ADDCONTROLLER"
-                                      />
-                                    </div>
-                                    <span className="opacity-75 text-purple text-xxsmall">Allow adding new controllers to manage the wallet</span>
-                                  </div>
-                                </div>
-                                <div className="flex gap-[10px] items-center">
-                                  <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                    <div className="flex w-full justify-between">
-                                      <span className="font-bold opacity-90 text-purple text-xsmall">Edit Permissions</span>
-                                      <ToggleSwitch
-                                        isToggled={controller.permissions.EDITPERMISSIONS}
-                                        onToggle={() => updatePermission(controller.address, 'EDITPERMISSIONS')} 
-                                        controllerAddress={controller.address}
-                                        permissionKey="EDITPERMISSIONS"
-                                      />
-                                    </div>
-                                    <span className="opacity-75 text-purple text-xxsmall">Grant authority to modify the permissions of other controllers</span>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex flex-col gap-4 py-2">
-                              <div className="font-bold text-[18px] text-purple">
-                                Signature
-                              </div>
-                              <div className="flex flex-col keymanager:h-full keymanager:justify-between gap-4">
-                                <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                  <div className="flex w-full justify-between">
-                                    <span className="font-bold opacity-90 text-purple text-xsmall">Encrypt</span>
-                                    <ToggleSwitch
-                                      isToggled={controller.permissions.ENCRYPT}
-                                      onToggle={() => updatePermission(controller.address, 'ENCRYPT')} 
-                                      controllerAddress={controller.address}
-                                      permissionKey="ENCRYPT"
-                                    />
-                                  </div>
-                                  <span className="opacity-75 text-purple text-xxsmall">Allow encryption of messages using the wallet's keys</span>
-                                </div>
-                                <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                  <div className="flex w-full justify-between">
-                                    <span className="font-bold opacity-90 text-purple text-xsmall">Decrypt</span>
-                                    <ToggleSwitch
-                                      isToggled={controller.permissions.DECRYPT}
-                                      onToggle={() => updatePermission(controller.address, 'DECRYPT')} 
-                                      controllerAddress={controller.address}
-                                      permissionKey="DECRYPT"
-                                    />
-                                  </div>
-                                  <span className="opacity-75 text-purple text-xxsmall">Allow decryption of encrypted messages using the wallet's keys</span>
-                                </div>
-                                <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                  <div className="flex w-full justify-between">
-                                    <span className="font-bold opacity-90 text-purple text-xsmall">Sign</span>
-                                    <ToggleSwitch
-                                      isToggled={controller.permissions.SIGN}
-                                      onToggle={() => updatePermission(controller.address, 'SIGN')} 
-                                      controllerAddress={controller.address}
-                                      permissionKey="SIGN"
-                                    />
-                                  </div>
-                                  <span className="opacity-75 text-purple text-xxsmall">Enable the wallet to sign messages, proving identity/consent</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex flex-col gap-4 py-2">
-                              <div className="font-bold text-[18px] text-purple">
-                                Asset Management
-                              </div>
-                              <div className="flex flex-col gap-4">
-                              <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                <div className="flex w-full justify-between">
-                                  <span className="font-bold opacity-90 text-purple text-xsmall">Super Transfer Value</span>
-                                    <ToggleSwitch
-                                      isToggled={controller.permissions.SUPER_TRANSFERVALUE}
-                                      onToggle={() => updatePermission(controller.address, 'SUPER_TRANSFERVALUE')} 
-                                      controllerAddress={controller.address}
-                                      permissionKey="SUPER_TRANSFERVALUE"
-                                    />
-                                  </div>
-                                  <span className="opacity-75 text-purple text-xxsmall">Allow transfer of value or assets with elevated permissions</span>
-                                </div>
-                                <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                  <div className="flex w-full justify-between">
-                                    <span className="font-bold opacity-90 text-purple text-xsmall">Transfer Value</span>
-                                    <ToggleSwitch
-                                      isToggled={controller.permissions.TRANSFERVALUE}
-                                      onToggle={() => updatePermission(controller.address, 'TRANSFERVALUE')} 
-                                      controllerAddress={controller.address}
-                                      permissionKey="TRANSFERVALUE"
-                                    />
-                                  </div>
-                                  <span className="opacity-75 text-purple text-xxsmall">Enable the transfer of native tokens or assets from the wallet</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex flex-col gap-4 py-2">
-                              <div className="font-bold text-[18px] text-purple">
-                                Calls
-                              </div>
-                              <div className="flex flex-col gap-4">
-                                <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                  <div className="flex w-full justify-between">
-                                    <span className="font-bold opacity-90 text-purple text-xsmall">Super Call</span>
-                                    <ToggleSwitch
-                                      isToggled={controller.permissions.SUPER_CALL}
-                                      onToggle={() => updatePermission(controller.address, 'SUPER_CALL')} 
-                                      controllerAddress={controller.address}
-                                      permissionKey="SUPER_CALL"
-                                    />
-                                  </div>
-                                  <span className="opacity-75 text-purple text-xxsmall">Grant enhanced calling capabilities, potentially with elevated privileges</span>
-                                </div>
-                                <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                  <div className="flex w-full justify-between">
-                                    <span className="font-bold opacity-90 text-purple text-xsmall">Call</span>
-                                    <ToggleSwitch
-                                      isToggled={controller.permissions.CALL}
-                                      onToggle={() => updatePermission(controller.address, 'CALL')} 
-                                      controllerAddress={controller.address}
-                                      permissionKey="CALL"
-                                    />
-                                  </div>
-                                  <span className="opacity-75 text-purple text-xxsmall">Authorize interactions with other smart contracts, enabling changes to them</span>
-                                </div>
-                                <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                  <div className="flex w-full justify-between">
-                                    <span className="font-bold opacity-90 text-purple text-xsmall">Super Static Call</span>
-                                    <ToggleSwitch
-                                      isToggled={controller.permissions.SUPER_STATICCALL}
-                                      onToggle={() => updatePermission(controller.address, 'SUPER_STATICCALL')} 
-                                      controllerAddress={controller.address}
-                                      permissionKey="SUPER_STATICCALL"
-                                    />
-                                  </div>
-                                  <span className="opacity-75 text-purple text-xxsmall">Permit advanced read-only interactions with smart contracts</span>
-                                </div>
-                                <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                  <div className="flex w-full justify-between">
-                                    <span className="font-bold opacity-90 text-purple text-xsmall">Static Call</span>
-                                    <ToggleSwitch
-                                      isToggled={controller.permissions.STATICCALL}
-                                      onToggle={() => updatePermission(controller.address, 'STATICCALL')} 
-                                      controllerAddress={controller.address}
-                                      permissionKey="STATICCALL"
-                                    />
-                                  </div>
-                                  <span className="opacity-75 text-purple text-xxsmall">Allow interactions with smart contracts in a read-only mode</span>
-                                </div>
-                                <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                  <div className="flex w-full justify-between">
-                                    <span className="font-bold opacity-90 text-purple text-xsmall">Super Delegate Call</span>
-                                    <ToggleSwitch
-                                      isToggled={controller.permissions.SUPER_DELEGATECALL}
-                                      onToggle={() => updatePermission(controller.address, 'SUPER_DELEGATECALL')} 
-                                      controllerAddress={controller.address}
-                                      permissionKey="SUPER_DELEGATECALL"
-                                    />
-                                  </div>
-                                  <span className="opacity-75 text-purple text-xxsmall">Allow high-level delegate calls with more extensive authority</span>
-                                </div>
-                                <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                  <div className="flex w-full justify-between">
-                                    <span className="font-bold opacity-90 text-purple text-xsmall">Delegate Call</span>
-                                    <ToggleSwitch
-                                      isToggled={controller.permissions.DELEGATECALL}
-                                      onToggle={() => updatePermission(controller.address, 'DELEGATECALL')} 
-                                      controllerAddress={controller.address}
-                                      permissionKey="DELEGATECALL"
-                                    />
-                                  </div>
-                                  <span className="opacity-75 text-purple text-xxsmall">Permit running code from any smart contract inside the wallet's environment</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex flex-col gap-4 py-2 keymanager:mt-[-380px] extension:mt-[-365px] extension2:mt-[-350px] md:mt-[-325px] xl:mt-0">
-                              <div className="font-bold text-[18px] text-purple">
-                                Extensions
-                              </div>
-                              <div className="flex flex-col gap-4">
-                                <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                  <div className="flex w-full justify-between">
-                                    <span className="font-bold opacity-90 text-purple text-xsmall">Add Extensions</span>
-                                    <ToggleSwitch
-                                      isToggled={controller.permissions.ADDEXTENSIONS}
-                                      onToggle={() => updatePermission(controller.address, 'ADDEXTENSIONS')} 
-                                      controllerAddress={controller.address}
-                                      permissionKey="ADDEXTENSIONS"
-                                    />
-                                  </div>
-                                  <span className="opacity-75 text-purple text-xxsmall">Permit the addition of extensions to enhance wallet functionality</span>
-                                </div>
-                                <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                  <div className="flex w-full justify-between">
-                                    <span className="font-bold opacity-90 text-purple text-xsmall">Change Extensions</span>
-                                    <ToggleSwitch
-                                      isToggled={controller.permissions.CHANGEEXTENSIONS}
-                                      onToggle={() => updatePermission(controller.address, 'CHANGEEXTENSIONS')} 
-                                      controllerAddress={controller.address}
-                                      permissionKey="CHANGEEXTENSIONS"
-                                    />
-                                  </div>
-                                  <span className="opacity-75 text-purple text-xxsmall">Grant the ability to modify or replace existing wallet extensions</span>
-                                </div>
-                                <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                  <div className="flex w-full justify-between">
-                                    <span className="font-bold opacity-90 text-purple text-xsmall">Add URD</span>
-                                    <ToggleSwitch
-                                      isToggled={controller.permissions.ADDUNIVERSALRECEIVERDELEGATE}
-                                      onToggle={() => updatePermission(controller.address, 'ADDUNIVERSALRECEIVERDELEGATE')} 
-                                      controllerAddress={controller.address}
-                                      permissionKey="ADDUNIVERSALRECEIVERDELEGATE"
-                                    />
-                                  </div>
-                                  <span className="opacity-75 text-purple text-xxsmall">Allow addition of delegates for universal receiver functionality</span>
-                                </div>
-                                <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                  <div className="flex w-full justify-between">
-                                    <span className="font-bold opacity-90 text-purple text-xsmall">Change URD</span>
-                                    <ToggleSwitch
-                                      isToggled={controller.permissions.CHANGEUNIVERSALRECEIVERDELEGATE}
-                                      onToggle={() => updatePermission(controller.address, 'CHANGEUNIVERSALRECEIVERDELEGATE')} 
-                                      controllerAddress={controller.address}
-                                      permissionKey="CHANGEUNIVERSALRECEIVERDELEGATE"
-                                    />
-                                  </div>
-                                  <span className="opacity-75 text-purple text-xxsmall">Permit modifications to the delegates of the universal receiver</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex flex-col gap-4 py-2  md:mt-0">
-                              <div className="font-bold text-[18px] text-purple">
-                                Relay & Execution
-                              </div>
-                              <div className="flex flex-col gap-4">
-                                <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                  <div className="flex w-full justify-between">
-                                    <span className="font-bold opacity-90 text-purple text-xsmall">Execute Relay Call</span>
-                                    <ToggleSwitch
-                                      isToggled={controller.permissions.EXECUTE_RELAY_CALL}
-                                      onToggle={() => updatePermission(controller.address, 'EXECUTE_RELAY_CALL')} 
-                                      controllerAddress={controller.address}
-                                      permissionKey="EXECUTE_RELAY_CALL"
-                                    />
-                                  </div>
-                                  <span className="opacity-75 text-purple text-xxsmall">Enable execution of relay calls for advanced transaction handling</span>
-                                </div>
-                              </div>
-                            </div>
-                            <div className="flex flex-col gap-4 py-2 keymanager:mt-[-100px] md:mt-[-50px] xl:mt-0">
-                              <div className="font-bold text-[18px] text-purple">
-                                Contract Management
-                              </div>
-                              <div className="flex flex-col gap-4">
-                                <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                  <div className="flex w-full justify-between">
-                                    <span className="font-bold opacity-90 text-purple text-xsmall">Deploy</span>
-                                    <ToggleSwitch
-                                      isToggled={controller.permissions.DEPLOY}
-                                      onToggle={() => updatePermission(controller.address, 'DEPLOY')} 
-                                      controllerAddress={controller.address}
-                                      permissionKey="DEPLOY"
-                                    />
-                                  </div>
-                                  <span className="opacity-75 text-purple text-xxsmall">Enable deploying new smart contracts from the wallet</span>
-                                </div>
-                                <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                  <div className="flex w-full justify-between">
-                                    <span className="font-bold opacity-90 text-purple text-xsmall">Super Set Data</span>
-                                    <ToggleSwitch
-                                      isToggled={controller.permissions.SUPER_SETDATA}
-                                      onToggle={() => updatePermission(controller.address, 'SUPER_SETDATA')} 
-                                      controllerAddress={controller.address}
-                                      permissionKey="SUPER_SETDATA"
-                                    />
-                                  </div>
-                                  <span className="opacity-75 text-purple text-xxsmall">Enable advanced data setting capabilities, possibly with wider scope</span>
-                                </div>
-                                <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                  <div className="flex w-full justify-between">
-                                    <span className="font-bold opacity-90 text-purple text-xsmall">Set Data</span>
-                                    <ToggleSwitch
-                                      isToggled={controller.permissions.SETDATA}
-                                      onToggle={() => updatePermission(controller.address, 'SETDATA')} 
-                                      controllerAddress={controller.address}
-                                      permissionKey="SETDATA"
-                                    />
-                                  </div>
-                                  <span className="opacity-75 text-purple text-xxsmall">Permit modification or setting of data within the wallet or its associated contracts</span>
-                                </div>
-                              </div>
-                            </div>
-                            
-                            <div className="flex flex-col gap-4 py-2 base:grid-row-6">
-                              <div className="font-bold text-[18px] text-purple">
-                                Safety
-                              </div>
-                              <div className="flex flex-col gap-4">
-                                <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
-                                  <div className="flex w-full justify-between">
-                                    <span className="font-bold opacity-90 text-purple text-xsmall">Re-entrancy</span>
-                                    <ToggleSwitch
-                                      isToggled={controller.permissions.REENTRANCY}
-                                      onToggle={() => updatePermission(controller.address, 'REENTRANCY')} 
-                                      controllerAddress={controller.address}
-                                      permissionKey="REENTRANCY"
-                                    />
-                                  </div>
-                                  <span className="opacity-75 text-purple text-xxsmall">Allow successive executions, possibly in the context of smart contracts</span>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      ))
-                    )}
+                  <div className="flex flex-col gap-4">
+                    <div className="text-small text-red font-bold">DANGER ZONE</div>
+                    <div onClick={() => {deleteVault(selectedVault?.contract || "")}} className="text-red border border-red rounded-15 hover:bg-red hover:text-white hover:cursor-pointer transition w-[150px] py-2 px-4 text-center">Delete Vault</div>
                   </div>
-                </>
+                </div>
               )
               :
               (
-                <>
-                  <div className="flex sm:flex-col md:flex-row sm:gap-4 md:gap-0 w-full justify-between">
-                    <div className="flex gap-4 sm:flex-col base:flex-row">
-                      <TokenType tokenType={tokenType} setTokenType={setTokenType}/>
-                      <div className="keymanager:hidden text-center py-2 px-4 text-lightPurple border border-lightPurple hover:bg-lightPurple hover:text-white transition hover:cursor-pointer rounded-15">Controllers</div>
+                <div className="flex w-full h-full flex-col gap-8 px-4">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex w-full justify-between">
+                        <div className="text-purple font-bold text-large">{selectedVault?.name}</div>
+                        <div
+                        className="flex gap-2 items-center text-lightPurple hover:text-purple hover:cursor-pointer transition text-small"
+                        onMouseEnter={() => setHover(true)}
+                        onMouseLeave={() => setHover(false)}
+                        onClick={() => {setSettings(true)}}
+                      >
+                        <div>Settings</div>
+                        <div 
+                          className="transition ease-in-out duration-200"
+                        >
+                          <Image 
+                            src={hover ? settingsDark : lightSettings} 
+                            width={16} 
+                            height={16} 
+                            alt="Settings"
+                            className="hover:cursor-pointer"
+                          />
+                        </div>
+                      </div>
+                      </div>
+                      <div className="text-purple">{selectedVault?.desc}</div>
                     </div>
-                    <div className="flex gap-4 sm:flex-col base:flex-row">
-                      <button onClick={() => {setIsController(true)}} className="sm:hidden keymanager:flex text-center py-2 px-4 text-lightPurple border border-lightPurple hover:bg-lightPurple hover:text-white transition hover:cursor-pointer rounded-15">Controllers</button>
-                      <SearchBar placeholder="Search for a token..." onSearch={value => setSearchQuery(value)} />
+                    <div className="flex gap-2 items-center hover:cursor-pointer opacity-75" onClick={() => {copyToClipboard(selectedVault?.contract); notify("Vault Address Copied", NotificationType.Success)}}>
+                      <div className="text-purple">{formatAddress(selectedVault?.contract || "")}</div>
+                      <Image src={copy} width={12} height={12} alt="Copy vault address" />
                     </div>
                   </div>
-
-                  <div className="flex flex-col w-full gap-2">
-                    <div className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12">
-                      <div className="grid sm:grid-cols-4 lg:grid-cols-12">
-                        <div className="sm:col-span-2 base:col-span-1 lg:col-span-4 text-purple font-normal opacity-75 flex">
-                          Token
+                  {isController ? (
+                    <>
+                      <div className="flex sm:gap-4 keymanager:gap-0 sm:flex-col keymanager:flex-row w-full keymanager:justify-between keymanager:items-center">
+                        <div className="flex flex-col gap-2">
+                          <div onClick={() => {console.log(selectedVault)}} className="text-medium font-bold text-purple">Controller Permissions</div>
+                          <div className="sm:text-xsmall md:text-small text-purple opacity-90">Remove, add and manage controller permissions</div>
                         </div>
-                        <div className="sm:hidden base:justify-end md:justify-center lg:justify-start base:flex sm:col-span-1 lg:col-span-4 text-purple font-normal opacity-75">
-                          Price
+                        <div onClick={() => { if (isConnected) setAddController(true) }}  className="w-[135px] py-2 px-4 rounded-15 text-xsmall border border-lightPurple text-purple font-bold hover:cursor-pointer hover:bg-purple hover:text-white transition">
+                          Add Controller
                         </div>
-                        <div className="base:justify-end lg:justify-start sm:col-span-1 lg:col-span-3 text-purple font-normal opacity-75 flex">
-                          Balance
-                        </div>
-                        <div className="sm:col-span-1 lg:col-span-1"></div>
                       </div>
-                    </div>
+                      <PopupButton isVisible={arePermissionsChanged} onReset={handleReset} onConfirm={handleConfirm} controllerAddresses={controllerAddresses.map(controller => controller.address)}/>
+                      <div className="flex flex-col w-full gap-2">
+                        <div className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12">
+                          <div className="flex w-full justify-between items-center">
+                            <div className="text-purple font-bold flex opacity-75">
+                              Controllers
+                            </div>
+                            <div className="text-purple font-bold flex opacity-75">
+                              Permissions
+                            </div>
+                          </div>
+                        </div>
 
-                    {!isConnected ? (
-                      <div className="flex items-center justify-center py-8 text-lightPurple text-small">Connect to see assets</div>
-                    )
-                    :
-                    (
-                      isLoading ? (
+                      {isLoading ? (
                         <div className="loading opacity-75 w-full flex justify-center items-center p-16">
                           <span className="loading__dot"></span>
                           <span className="loading__dot"></span>
@@ -1272,52 +1068,464 @@ const Vault = () => {
                       )
                       :
                       (
-                        (tokenType === "LSP7" ? safeFilteredLSP7Tokens : safeFilteredLSP8Tokens).map((token, index) => (
-                          <div key={index} className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12 py-2">
-                            <div className="grid sm:grid-cols-4 lg:grid-cols-12 items-center">
-                              <div className="flex items-center gap-4 sm:col-span-2 base:col-span-1 lg:col-span-4 text-purple font-normal opacity-75">
-                                <div className="flex flex-col">
-                                  <div className="text-small font-bold">{token.Name}</div>
-                                  <div className="text-xsmall opacity-75">{token.Symbol}</div>
-                                </div>
+                        selectedVault?.changedPermissions.map((controller, index) => (
+                          <div key={index} className="hidden sm:table-header-group grid grid-cols-12 border border-lightPurple border-opacity-25 rounded-15 py-2 px-4">
+                            <div  className="flex w-full justify-between items-center py-2">
+                              <div className="flex items-center gap-4 sm:col-span-2 base:col-span-1 lg:col-span-5 text-purple font-normal">
+                                <div className="text-small font-bold">{formatAddress(controller.address)}</div>
                               </div>
-                              <div className="base:justify-end md:justify-center lg:justify-start sm:hidden base:flex sm:col-span-1 lg:col-span-4 text-purple font-normal opacity-75 flex">
-                                <div className="font-bold">
-                                  ...
-                                </div>
+                              <div className="sm:col-span-1 lg:col-span-4 text-purple font-normal flex">
+                                <div onClick={() => {togglePermissionsDropdown(controller.address)}} className="font-bold text-xsmall transition hover:cursor-pointer">show more</div>
                               </div>
-                              <div className="flex flex-col base:items-end lg:items-start sm:col-span-1 lg:col-span-3 text-purple font-normal opacity-75">
-                                <div className="font-bold">{balanceVisible ? (parseFloat(token.TokenAmount) % 1 === 0 ? parseInt(token.TokenAmount, 10) : parseFloat(token.TokenAmount).toFixed(2)) : "***"}</div>
-                              </div>
-                              <div onClick={() => handleDropdownClick(index)} className="relative flex flex-col gap-2 sm:col-span-1 lg:col-span-1 pr-2 w-full items-end justify-end hover:cursor-pointer">
-                                <div className="w-[3px] h-[3px] rounded-[99px] bg-lightPurple bg-opacity-75"></div>
-                                <div className="w-[3px] h-[3px] rounded-[99px] bg-lightPurple bg-opacity-75"></div>
-                                <div className="w-[3px] h-[3px] rounded-[99px] bg-lightPurple bg-opacity-75"></div>
-                                {index === isDropdownVisible && <div ref={dropdownRef} className={`absolute top-0 w-[220px] flex flex-col gap-4 py-4 z-50 justify-center items-center bg-white shadow rounded-10 py-2 px-4 border border-lightPurple border-opacity-25 mr-[-10px] mt-[35px]  ${isDropdownVisible === index ? 'animate-popup-in' : 'animate-popup-out'}`}
-                                  style={{ animationFillMode: 'forwards' }}
-                                >
-                                  <div className="flex gap-4 justify-center items-center">
-                                    <Image src={copy} width={18} height={18} alt="Copy Token Address" className="ml-[-20px]" />
-                                    <button onClick={() => {copyToClipboard(token.Address), handleDropdownClick(index); notify("Address Copied", NotificationType.Success)}} className="text-xsmall text-lightPurple">Copy token address</button>
+                            </div> 
+                            {visibilityStates[controller.address] && (
+                              <div 
+                                className={`flex w-full ${dropdownVisible[controller.address] ? 'animate-reveal' : 'animate-conceal'} py-4 transition sm:gap-4 md:gap-2 grid :grid-cols-1 keymanager:grid-cols-2 xl:grid-cols-3 text-xsmall overflow-y-auto hide-scrollbar`}
+                                style={{ animationFillMode: 'forwards' }}
+                              >
+                                <div className="flex flex-col gap-4 py-2">
+                                  <div className="font-bold text-[18px] text-purple">
+                                    Ownership
                                   </div>
-                                  <div className="flex gap-4 justify-center items-center">
-                                    <Image src={externalLink} width={18} height={18} alt="Copy Token Address" />
-                                    <a href={`https://explorer.execution.testnet.lukso.network/address/${token.Address}`} target="_blank" onClick={() => {handleDropdownClick(index)}} className="text-xsmall text-lightPurple">View on block explorer</a>
+                                  <div className="flex flex-col justify-between gap-8 h-full">
+                                    <div className="flex gap-[10px] items-center">
+                                      <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                        <div className="flex w-full justify-between">
+                                          <span className="font-bold opacity-90 text-purple text-xsmall">Change Owner</span>
+                                          <ToggleSwitch 
+                                            isToggled={controller.permissions.CHANGEOWNER}
+                                            onToggle={() => updatePermission(controller.address, 'CHANGEOWNER')} 
+                                            controllerAddress={controller.address}
+                                            permissionKey="CHANGEOWNER"
+                                          />
+                                        </div>
+                                        <span className="opacity-75 text-purple text-xxsmall">Enable the transfer of ownership rights to another address</span>
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-[10px] items-center">
+                                      <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                        <div className="flex w-full justify-between">
+                                          <span className="font-bold opacity-90 text-purple text-xsmall">Add Controller</span>
+                                          <ToggleSwitch
+                                            isToggled={controller.permissions.ADDCONTROLLER}
+                                            onToggle={() => updatePermission(controller.address, 'ADDCONTROLLER')} 
+                                            controllerAddress={controller.address}
+                                            permissionKey="ADDCONTROLLER"
+                                          />
+                                        </div>
+                                        <span className="opacity-75 text-purple text-xxsmall">Allow adding new controllers to manage the wallet</span>
+                                      </div>
+                                    </div>
+                                    <div className="flex gap-[10px] items-center">
+                                      <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                        <div className="flex w-full justify-between">
+                                          <span className="font-bold opacity-90 text-purple text-xsmall">Edit Permissions</span>
+                                          <ToggleSwitch
+                                            isToggled={controller.permissions.EDITPERMISSIONS}
+                                            onToggle={() => updatePermission(controller.address, 'EDITPERMISSIONS')} 
+                                            controllerAddress={controller.address}
+                                            permissionKey="EDITPERMISSIONS"
+                                          />
+                                        </div>
+                                        <span className="opacity-75 text-purple text-xxsmall">Grant authority to modify the permissions of other controllers</span>
+                                      </div>
+                                    </div>
                                   </div>
                                 </div>
-                                }
+                                <div className="flex flex-col gap-4 py-2">
+                                  <div className="font-bold text-[18px] text-purple">
+                                    Signature
+                                  </div>
+                                  <div className="flex flex-col keymanager:h-full keymanager:justify-between gap-4">
+                                    <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                      <div className="flex w-full justify-between">
+                                        <span className="font-bold opacity-90 text-purple text-xsmall">Encrypt</span>
+                                        <ToggleSwitch
+                                          isToggled={controller.permissions.ENCRYPT}
+                                          onToggle={() => updatePermission(controller.address, 'ENCRYPT')} 
+                                          controllerAddress={controller.address}
+                                          permissionKey="ENCRYPT"
+                                        />
+                                      </div>
+                                      <span className="opacity-75 text-purple text-xxsmall">Allow encryption of messages using the wallet's keys</span>
+                                    </div>
+                                    <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                      <div className="flex w-full justify-between">
+                                        <span className="font-bold opacity-90 text-purple text-xsmall">Decrypt</span>
+                                        <ToggleSwitch
+                                          isToggled={controller.permissions.DECRYPT}
+                                          onToggle={() => updatePermission(controller.address, 'DECRYPT')} 
+                                          controllerAddress={controller.address}
+                                          permissionKey="DECRYPT"
+                                        />
+                                      </div>
+                                      <span className="opacity-75 text-purple text-xxsmall">Allow decryption of encrypted messages using the wallet's keys</span>
+                                    </div>
+                                    <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                      <div className="flex w-full justify-between">
+                                        <span className="font-bold opacity-90 text-purple text-xsmall">Sign</span>
+                                        <ToggleSwitch
+                                          isToggled={controller.permissions.SIGN}
+                                          onToggle={() => updatePermission(controller.address, 'SIGN')} 
+                                          controllerAddress={controller.address}
+                                          permissionKey="SIGN"
+                                        />
+                                      </div>
+                                      <span className="opacity-75 text-purple text-xxsmall">Enable the wallet to sign messages, proving identity/consent</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col gap-4 py-2">
+                                  <div className="font-bold text-[18px] text-purple">
+                                    Asset Management
+                                  </div>
+                                  <div className="flex flex-col gap-4">
+                                  <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                    <div className="flex w-full justify-between">
+                                      <span className="font-bold opacity-90 text-purple text-xsmall">Super Transfer Value</span>
+                                        <ToggleSwitch
+                                          isToggled={controller.permissions.SUPER_TRANSFERVALUE}
+                                          onToggle={() => updatePermission(controller.address, 'SUPER_TRANSFERVALUE')} 
+                                          controllerAddress={controller.address}
+                                          permissionKey="SUPER_TRANSFERVALUE"
+                                        />
+                                      </div>
+                                      <span className="opacity-75 text-purple text-xxsmall">Allow transfer of value or assets with elevated permissions</span>
+                                    </div>
+                                    <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                      <div className="flex w-full justify-between">
+                                        <span className="font-bold opacity-90 text-purple text-xsmall">Transfer Value</span>
+                                        <ToggleSwitch
+                                          isToggled={controller.permissions.TRANSFERVALUE}
+                                          onToggle={() => updatePermission(controller.address, 'TRANSFERVALUE')} 
+                                          controllerAddress={controller.address}
+                                          permissionKey="TRANSFERVALUE"
+                                        />
+                                      </div>
+                                      <span className="opacity-75 text-purple text-xxsmall">Enable the transfer of native tokens or assets from the wallet</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col gap-4 py-2">
+                                  <div className="font-bold text-[18px] text-purple">
+                                    Calls
+                                  </div>
+                                  <div className="flex flex-col gap-4">
+                                    <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                      <div className="flex w-full justify-between">
+                                        <span className="font-bold opacity-90 text-purple text-xsmall">Super Call</span>
+                                        <ToggleSwitch
+                                          isToggled={controller.permissions.SUPER_CALL}
+                                          onToggle={() => updatePermission(controller.address, 'SUPER_CALL')} 
+                                          controllerAddress={controller.address}
+                                          permissionKey="SUPER_CALL"
+                                        />
+                                      </div>
+                                      <span className="opacity-75 text-purple text-xxsmall">Grant enhanced calling capabilities, potentially with elevated privileges</span>
+                                    </div>
+                                    <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                      <div className="flex w-full justify-between">
+                                        <span className="font-bold opacity-90 text-purple text-xsmall">Call</span>
+                                        <ToggleSwitch
+                                          isToggled={controller.permissions.CALL}
+                                          onToggle={() => updatePermission(controller.address, 'CALL')} 
+                                          controllerAddress={controller.address}
+                                          permissionKey="CALL"
+                                        />
+                                      </div>
+                                      <span className="opacity-75 text-purple text-xxsmall">Authorize interactions with other smart contracts, enabling changes to them</span>
+                                    </div>
+                                    <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                      <div className="flex w-full justify-between">
+                                        <span className="font-bold opacity-90 text-purple text-xsmall">Super Static Call</span>
+                                        <ToggleSwitch
+                                          isToggled={controller.permissions.SUPER_STATICCALL}
+                                          onToggle={() => updatePermission(controller.address, 'SUPER_STATICCALL')} 
+                                          controllerAddress={controller.address}
+                                          permissionKey="SUPER_STATICCALL"
+                                        />
+                                      </div>
+                                      <span className="opacity-75 text-purple text-xxsmall">Permit advanced read-only interactions with smart contracts</span>
+                                    </div>
+                                    <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                      <div className="flex w-full justify-between">
+                                        <span className="font-bold opacity-90 text-purple text-xsmall">Static Call</span>
+                                        <ToggleSwitch
+                                          isToggled={controller.permissions.STATICCALL}
+                                          onToggle={() => updatePermission(controller.address, 'STATICCALL')} 
+                                          controllerAddress={controller.address}
+                                          permissionKey="STATICCALL"
+                                        />
+                                      </div>
+                                      <span className="opacity-75 text-purple text-xxsmall">Allow interactions with smart contracts in a read-only mode</span>
+                                    </div>
+                                    <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                      <div className="flex w-full justify-between">
+                                        <span className="font-bold opacity-90 text-purple text-xsmall">Super Delegate Call</span>
+                                        <ToggleSwitch
+                                          isToggled={controller.permissions.SUPER_DELEGATECALL}
+                                          onToggle={() => updatePermission(controller.address, 'SUPER_DELEGATECALL')} 
+                                          controllerAddress={controller.address}
+                                          permissionKey="SUPER_DELEGATECALL"
+                                        />
+                                      </div>
+                                      <span className="opacity-75 text-purple text-xxsmall">Allow high-level delegate calls with more extensive authority</span>
+                                    </div>
+                                    <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                      <div className="flex w-full justify-between">
+                                        <span className="font-bold opacity-90 text-purple text-xsmall">Delegate Call</span>
+                                        <ToggleSwitch
+                                          isToggled={controller.permissions.DELEGATECALL}
+                                          onToggle={() => updatePermission(controller.address, 'DELEGATECALL')} 
+                                          controllerAddress={controller.address}
+                                          permissionKey="DELEGATECALL"
+                                        />
+                                      </div>
+                                      <span className="opacity-75 text-purple text-xxsmall">Permit running code from any smart contract inside the wallet's environment</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col gap-4 py-2 keymanager:mt-[-380px] extension:mt-[-365px] extension2:mt-[-350px] md:mt-[-325px] xl:mt-0">
+                                  <div className="font-bold text-[18px] text-purple">
+                                    Extensions
+                                  </div>
+                                  <div className="flex flex-col gap-4">
+                                    <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                      <div className="flex w-full justify-between">
+                                        <span className="font-bold opacity-90 text-purple text-xsmall">Add Extensions</span>
+                                        <ToggleSwitch
+                                          isToggled={controller.permissions.ADDEXTENSIONS}
+                                          onToggle={() => updatePermission(controller.address, 'ADDEXTENSIONS')} 
+                                          controllerAddress={controller.address}
+                                          permissionKey="ADDEXTENSIONS"
+                                        />
+                                      </div>
+                                      <span className="opacity-75 text-purple text-xxsmall">Permit the addition of extensions to enhance wallet functionality</span>
+                                    </div>
+                                    <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                      <div className="flex w-full justify-between">
+                                        <span className="font-bold opacity-90 text-purple text-xsmall">Change Extensions</span>
+                                        <ToggleSwitch
+                                          isToggled={controller.permissions.CHANGEEXTENSIONS}
+                                          onToggle={() => updatePermission(controller.address, 'CHANGEEXTENSIONS')} 
+                                          controllerAddress={controller.address}
+                                          permissionKey="CHANGEEXTENSIONS"
+                                        />
+                                      </div>
+                                      <span className="opacity-75 text-purple text-xxsmall">Grant the ability to modify or replace existing wallet extensions</span>
+                                    </div>
+                                    <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                      <div className="flex w-full justify-between">
+                                        <span className="font-bold opacity-90 text-purple text-xsmall">Add URD</span>
+                                        <ToggleSwitch
+                                          isToggled={controller.permissions.ADDUNIVERSALRECEIVERDELEGATE}
+                                          onToggle={() => updatePermission(controller.address, 'ADDUNIVERSALRECEIVERDELEGATE')} 
+                                          controllerAddress={controller.address}
+                                          permissionKey="ADDUNIVERSALRECEIVERDELEGATE"
+                                        />
+                                      </div>
+                                      <span className="opacity-75 text-purple text-xxsmall">Allow addition of delegates for universal receiver functionality</span>
+                                    </div>
+                                    <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                      <div className="flex w-full justify-between">
+                                        <span className="font-bold opacity-90 text-purple text-xsmall">Change URD</span>
+                                        <ToggleSwitch
+                                          isToggled={controller.permissions.CHANGEUNIVERSALRECEIVERDELEGATE}
+                                          onToggle={() => updatePermission(controller.address, 'CHANGEUNIVERSALRECEIVERDELEGATE')} 
+                                          controllerAddress={controller.address}
+                                          permissionKey="CHANGEUNIVERSALRECEIVERDELEGATE"
+                                        />
+                                      </div>
+                                      <span className="opacity-75 text-purple text-xxsmall">Permit modifications to the delegates of the universal receiver</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col gap-4 py-2  md:mt-0">
+                                  <div className="font-bold text-[18px] text-purple">
+                                    Relay & Execution
+                                  </div>
+                                  <div className="flex flex-col gap-4">
+                                    <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                      <div className="flex w-full justify-between">
+                                        <span className="font-bold opacity-90 text-purple text-xsmall">Execute Relay Call</span>
+                                        <ToggleSwitch
+                                          isToggled={controller.permissions.EXECUTE_RELAY_CALL}
+                                          onToggle={() => updatePermission(controller.address, 'EXECUTE_RELAY_CALL')} 
+                                          controllerAddress={controller.address}
+                                          permissionKey="EXECUTE_RELAY_CALL"
+                                        />
+                                      </div>
+                                      <span className="opacity-75 text-purple text-xxsmall">Enable execution of relay calls for advanced transaction handling</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col gap-4 py-2 keymanager:mt-[-100px] md:mt-[-50px] xl:mt-0">
+                                  <div className="font-bold text-[18px] text-purple">
+                                    Contract Management
+                                  </div>
+                                  <div className="flex flex-col gap-4">
+                                    <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                      <div className="flex w-full justify-between">
+                                        <span className="font-bold opacity-90 text-purple text-xsmall">Deploy</span>
+                                        <ToggleSwitch
+                                          isToggled={controller.permissions.DEPLOY}
+                                          onToggle={() => updatePermission(controller.address, 'DEPLOY')} 
+                                          controllerAddress={controller.address}
+                                          permissionKey="DEPLOY"
+                                        />
+                                      </div>
+                                      <span className="opacity-75 text-purple text-xxsmall">Enable deploying new smart contracts from the wallet</span>
+                                    </div>
+                                    <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                      <div className="flex w-full justify-between">
+                                        <span className="font-bold opacity-90 text-purple text-xsmall">Super Set Data</span>
+                                        <ToggleSwitch
+                                          isToggled={controller.permissions.SUPER_SETDATA}
+                                          onToggle={() => updatePermission(controller.address, 'SUPER_SETDATA')} 
+                                          controllerAddress={controller.address}
+                                          permissionKey="SUPER_SETDATA"
+                                        />
+                                      </div>
+                                      <span className="opacity-75 text-purple text-xxsmall">Enable advanced data setting capabilities, possibly with wider scope</span>
+                                    </div>
+                                    <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                      <div className="flex w-full justify-between">
+                                        <span className="font-bold opacity-90 text-purple text-xsmall">Set Data</span>
+                                        <ToggleSwitch
+                                          isToggled={controller.permissions.SETDATA}
+                                          onToggle={() => updatePermission(controller.address, 'SETDATA')} 
+                                          controllerAddress={controller.address}
+                                          permissionKey="SETDATA"
+                                        />
+                                      </div>
+                                      <span className="opacity-75 text-purple text-xxsmall">Permit modification or setting of data within the wallet or its associated contracts</span>
+                                    </div>
+                                  </div>
+                                </div>
+                                
+                                <div className="flex flex-col gap-4 py-2 base:grid-row-6">
+                                  <div className="font-bold text-[18px] text-purple">
+                                    Safety
+                                  </div>
+                                  <div className="flex flex-col gap-4">
+                                    <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
+                                      <div className="flex w-full justify-between">
+                                        <span className="font-bold opacity-90 text-purple text-xsmall">Re-entrancy</span>
+                                        <ToggleSwitch
+                                          isToggled={controller.permissions.REENTRANCY}
+                                          onToggle={() => updatePermission(controller.address, 'REENTRANCY')} 
+                                          controllerAddress={controller.address}
+                                          permissionKey="REENTRANCY"
+                                        />
+                                      </div>
+                                      <span className="opacity-75 text-purple text-xxsmall">Allow successive executions, possibly in the context of smart contracts</span>
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
-                            </div>
+                            )}
                           </div>
-                        ))
-                      )
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
+                          ))
+                        )}
+                      </div>
+                    </>
+                  )
+                  :
+                  (
+                    <>
+                      <div className="flex sm:flex-col md:flex-row sm:gap-4 md:gap-0 w-full justify-between">
+                        <div className="flex gap-4 sm:flex-col base:flex-row">
+                          <TokenType tokenType={tokenType} setTokenType={setTokenType}/>
+                          <div onClick={() => {setIsController(true)}}
+                            className="keymanager:hidden text-center py-2 px-4 text-lightPurple border border-lightPurple hover:bg-lightPurple hover:text-white transition hover:cursor-pointer rounded-15">
+                              Controllers
+                          </div>
+                        </div>
+                        <div className="flex gap-4 sm:flex-col base:flex-row">
+                          <button onClick={() => {setIsController(true)}}
+                            className="sm:hidden keymanager:flex text-center py-2 px-4 text-lightPurple border border-lightPurple hover:bg-lightPurple hover:text-white transition hover:cursor-pointer rounded-15">
+                              Controllers
+                          </button>
+                          <SearchBar placeholder="Search for a token..." onSearch={value => setSearchQuery(value)} />
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col w-full gap-2">
+                        <div className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12">
+                          <div className="grid sm:grid-cols-4 lg:grid-cols-12">
+                            <div className="sm:col-span-2 base:col-span-1 lg:col-span-4 text-purple font-normal opacity-75 flex">
+                              Token
+                            </div>
+                            <div className="sm:hidden base:justify-end md:justify-center lg:justify-start base:flex sm:col-span-1 lg:col-span-4 text-purple font-normal opacity-75">
+                              Price
+                            </div>
+                            <div className="base:justify-end lg:justify-start sm:col-span-1 lg:col-span-3 text-purple font-normal opacity-75 flex">
+                              Balance
+                            </div>
+                            <div className="sm:col-span-1 lg:col-span-1"></div>
+                          </div>
+                        </div>
+
+                        {!isConnected ? (
+                          <div className="flex items-center justify-center py-8 text-lightPurple text-small">Connect to see assets</div>
+                        )
+                        :
+                        (
+                          isLoading ? (
+                            <div className="loading opacity-75 w-full flex justify-center items-center p-16">
+                              <span className="loading__dot"></span>
+                              <span className="loading__dot"></span>
+                              <span className="loading__dot"></span>
+                            </div>
+                          )
+                          :
+                          (
+                            (tokenType === "LSP7" ? safeFilteredLSP7Tokens : safeFilteredLSP8Tokens).map((token, index) => (
+                              <div key={index} className="border-b border-lightPurple border-opacity-10 pb-2 hidden sm:table-header-group grid grid-cols-12 py-2">
+                                <div className="grid sm:grid-cols-4 lg:grid-cols-12 items-center">
+                                  <div className="flex items-center gap-4 sm:col-span-2 base:col-span-1 lg:col-span-4 text-purple font-normal opacity-75">
+                                    <div className="flex flex-col">
+                                      <div className="text-small font-bold">{token.Name}</div>
+                                      <div className="text-xsmall opacity-75">{token.Symbol}</div>
+                                    </div>
+                                  </div>
+                                  <div className="base:justify-end md:justify-center lg:justify-start sm:hidden base:flex sm:col-span-1 lg:col-span-4 text-purple font-normal opacity-75 flex">
+                                    <div className="font-bold">
+                                      ...
+                                    </div>
+                                  </div>
+                                  <div className="flex flex-col base:items-end lg:items-start sm:col-span-1 lg:col-span-3 text-purple font-normal opacity-75">
+                                    <div className="font-bold">{balanceVisible ? (parseFloat(token.TokenAmount) % 1 === 0 ? parseInt(token.TokenAmount, 10) : parseFloat(token.TokenAmount).toFixed(2)) : "***"}</div>
+                                  </div>
+                                  <div onClick={() => handleDropdownClick(index)} className="relative flex flex-col gap-2 sm:col-span-1 lg:col-span-1 pr-2 w-full items-end justify-end hover:cursor-pointer">
+                                    <div className="w-[3px] h-[3px] rounded-[99px] bg-lightPurple bg-opacity-75"></div>
+                                    <div className="w-[3px] h-[3px] rounded-[99px] bg-lightPurple bg-opacity-75"></div>
+                                    <div className="w-[3px] h-[3px] rounded-[99px] bg-lightPurple bg-opacity-75"></div>
+                                    {index === isDropdownVisible && <div ref={dropdownRef} className={`absolute top-0 w-[220px] flex flex-col gap-4 py-4 z-50 justify-center items-center bg-white shadow rounded-10 py-2 px-4 border border-lightPurple border-opacity-25 mr-[-10px] mt-[35px]  ${isDropdownVisible === index ? 'animate-popup-in' : 'animate-popup-out'}`}
+                                      style={{ animationFillMode: 'forwards' }}
+                                    >
+                                      <div className="flex gap-4 justify-center items-center">
+                                        <Image src={copy} width={18} height={18} alt="Copy Token Address" className="ml-[-20px]" />
+                                        <button onClick={() => {copyToClipboard(token.Address), handleDropdownClick(index); notify("Address Copied", NotificationType.Success)}} className="text-xsmall text-lightPurple">Copy token address</button>
+                                      </div>
+                                      <div className="flex gap-4 justify-center items-center">
+                                        <Image src={externalLink} width={18} height={18} alt="Copy Token Address" />
+                                        <a href={`https://explorer.execution.testnet.lukso.network/address/${token.Address}`} target="_blank" onClick={() => {handleDropdownClick(index)}} className="text-xsmall text-lightPurple">View on block explorer</a>
+                                      </div>
+                                    </div>
+                                    }
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )
+                        )}
+                      </div>
+                    </>  
+                  )}
+                </div>
+              )
             )}
-            
           </>
         )
         :

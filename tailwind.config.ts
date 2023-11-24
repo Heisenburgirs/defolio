@@ -90,6 +90,7 @@ const config: Config = {
       purple: "#646eb5",
       lightPurple: "#8993d1",
       green: '#4cca61',
+      red: '#ca4c4c',
     },
   },
   plugins: [],
