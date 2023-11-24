@@ -8,6 +8,7 @@ import lsp3ProfileSchema from '@erc725/erc725.js/schemas/LSP3ProfileMetadata.jso
 import LSP4Schema from '@erc725/erc725.js/schemas/LSP4DigitalAsset.json';
 import LSP7DigitalAsset from '@lukso/lsp-smart-contracts/artifacts/LSP7DigitalAsset.json'
 import LSP8DigitalAsset from '@lukso/lsp-smart-contracts/artifacts/LSP8IdentifiableDigitalAsset.json';
+import LSP6Schema from '@erc725/erc725.js/schemas/LSP6KeyManager.json';
 import { Web3 } from 'web3';
 import { ethers } from 'ethers';
 
@@ -17,14 +18,22 @@ interface VaultObject {
   name: string;
   desc: string;
   tokenBalances: TokenBalances;
+  controllersPermissions: ControllerPermission[];
+  changedPermissions: ControllerPermission[];
 }
 
 interface VaultData {
   vaults: VaultObject[];
+  isLoading: boolean;
+  setIndex: React.Dispatch<React.SetStateAction<number>>;
+  setVaults: React.Dispatch<React.SetStateAction<VaultObject[]>>,
 }
 
 const initialState: VaultData = {
   vaults: [],
+  isLoading: false,
+  setIndex: () => {},
+  setVaults: () => {},
 };
 
 const VaultContext = createContext<VaultData>(initialState);
@@ -36,6 +45,7 @@ interface VaultProviderProps {
 export const VaultProvider: React.FC<VaultProviderProps> = ({ children }) => {
   const { address, isConnected } = useAccount();
   const [isLoading, setIsLoading] = useState(false);
+  const [index, setIndex] = useState(0)
 
   const { data, isError } = useBalance({
     address: address,
@@ -85,10 +95,6 @@ export const VaultProvider: React.FC<VaultProviderProps> = ({ children }) => {
             desc = fetchDescResponse.value;
           }
 
-          // Fetch assets for vault
-          const vaultAddressesArray = fetchAddressResponse.value as string[];
-          
-          for (const vaultAddress of vaultAddressesArray) {
             const erc725js = new ERC725(
               lsp3ProfileSchema as ERC725JSONSchema[], 
               vaultAddress, 
@@ -124,7 +130,7 @@ export const VaultProvider: React.FC<VaultProviderProps> = ({ children }) => {
     
                 // Fetching balance for the given user address (replace with actual user address)
                 // @ts-ignore
-                const balance = await lsp7Contract.methods.balanceOf(vaultAddress).call();
+                const balance = await lsp7Contract.methods.balanceOf(vaultAddress ).call();
     
                 // Fetching token name and symbol
                 const digitalAssetMetadataSymbol = await myerc725.fetchData('LSP4TokenSymbol');
@@ -157,14 +163,14 @@ export const VaultProvider: React.FC<VaultProviderProps> = ({ children }) => {
                     // In case contract doesn't have decimals, we see if it ha balanceOf.
                     // If it does, it's LSP8
                     // @ts-ignore
-                    const balanceOf = await lsp8Contract.methods.balanceOf(vaultAddress).call();
+                    const balanceOf = await lsp8Contract.methods.balanceOf(vaultAddress ).call();
       
                     // @ts-ignore
                     const balanceOfStr = balanceOf.toString()
       
                     // Set tokenID
                     // @ts-ignore
-                    const tokenIdsBytes32 = await lsp8Contract.methods.tokenIdsOf(vaultAddress).call();
+                    const tokenIdsBytes32 = await lsp8Contract.methods.tokenIdsOf(vaultAddress ).call();
       
                     //console.log("tokenIdsBytes32", tokenIdsBytes32)
                     
@@ -191,8 +197,8 @@ export const VaultProvider: React.FC<VaultProviderProps> = ({ children }) => {
                 }
               }
 
-              const balance = await web3.eth.getBalance(vaultAddress);
-              const result = { address: vaultAddress, balance: balance };
+              const balance = await web3.eth.getBalance(vaultAddress );
+              const result = { address: vaultAddress , balance: balance };
               const balanceInEther = ethers.utils.formatEther(result.balance);
     
               const modifiedTokenBalances: TokenBalances = {
@@ -229,7 +235,6 @@ export const VaultProvider: React.FC<VaultProviderProps> = ({ children }) => {
               };
 
               tokenBalancesFinal = modifiedTokenBalances;
-            }
           }
     
           const emptyTokenBalances: TokenBalances = {
@@ -237,16 +242,48 @@ export const VaultProvider: React.FC<VaultProviderProps> = ({ children }) => {
             LSP8: []
           };
           
+          const erc725 = new ERC725(LSP6Schema as ERC725JSONSchema[], vaultAddress, 'https://rpc.testnet.lukso.gateway.fm');
+        
+          // Array of controller addresses on given UP
+          const addressesWithPerm = await erc725.getData('AddressPermissions[]');
+          console.log("addressesWithPerm", addressesWithPerm);
+          
+          const existingControllers = Array.isArray(addressesWithPerm.value) ? addressesWithPerm.value : [];
+      
+          const newControllersPermissions = [];
+      
+          for (const controllerAddress of existingControllers) {
+            const addressPermission = await erc725.getData({
+              keyName: 'AddressPermissions:Permissions:<address>',
+              dynamicKeyParts: controllerAddress,
+            });
+      
+            if (addressPermission && typeof addressPermission.value === 'string') {
+              const decodedPermission = erc725.decodePermissions(addressPermission.value);
+              newControllersPermissions.push({ 
+                address: controllerAddress, 
+                permissions: decodedPermission,
+                isChanged: false
+              });
+            } else {
+              console.error(`addressPermission.value for ${controllerAddress} is not a string or is null`);
+            }
+          }
+
           // Return a new VaultObject
           return {
             contract: vaultAddress,
             name: name,
             desc: desc,
             tokenBalances: tokenBalancesFinal || emptyTokenBalances,
+            controllersPermissions: newControllersPermissions,
+            changedPermissions: newControllersPermissions,
           };
         }));
 
+        // set vault assets
         setVaults(vault);
+
         setIsLoading(false)
       } catch (error) {
         console.error("Error fetching vault data:", error);
@@ -256,10 +293,10 @@ export const VaultProvider: React.FC<VaultProviderProps> = ({ children }) => {
     if (isConnected) {
       fetchVaults()
     }
-  }, [address, isConnected])
+  }, [address, isConnected, index])
   
   return (
-    <VaultContext.Provider value={{ vaults }}>
+    <VaultContext.Provider value={{ vaults, setVaults, isLoading, setIndex }}>
       {children}
     </VaultContext.Provider>
   );

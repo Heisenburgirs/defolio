@@ -80,6 +80,7 @@ export const KeymanagerProvider: React.FC<AssetsProviderProps> = ({ children }) 
       fetchControllersPermissions();
     }
   }, [address, index]);
+  
   return (
     <KeymanagerContext.Provider value={{ controllersPermissions, changedPermissions, isLoading, setControllersPermissions, setChangedPermissions, setIndex }}>
       {children}
