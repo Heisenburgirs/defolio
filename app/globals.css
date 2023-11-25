@@ -126,3 +126,13 @@ body {
   color: white;
   font-size: 30px;
 }
+
+// Refresh
+.rotate-hover {
+  transition: transform 1s ease-in-out;
+}
+
+.rotate-hover:hover {
+  transform: rotate(180deg);
+  transition: transform 1s ease-in-out;
+}

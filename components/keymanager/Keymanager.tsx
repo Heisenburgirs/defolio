@@ -16,6 +16,8 @@ import purpleArrow from '@/public/icons/purple_arrow.png';
 import { notify, NotificationType } from '../toast/Toast';
 import TransactionModal from '../modal/TransactionModal';
 import { useKeymanager } from '@/GlobalContext/KeymanagerContext/KeymanagerContext';
+import { useAssets } from '@/GlobalContext/AssetsContext/AssetsContext';
+import { useVault } from '@/GlobalContext/VaultContext/VaultContext';
 
 const Keymanager = () => {
   const { address, isConnected } = useAccount()
@@ -24,7 +26,9 @@ const Keymanager = () => {
   const [isChangePermissionInitiated, setIsChangePermissionInitiated] = useState(false);
   const [transactionStep, setTransactionStep] = useState(1);
 
-  const {controllersPermissions, changedPermissions, isLoading, setControllersPermissions, setChangedPermissions, setIndex} = useKeymanager()
+  const {controllersPermissions, changedPermissions, isLoading, setControllersPermissions, setChangedPermissions, setIndexKey} = useKeymanager()
+  const { vaults, setIndexVault } = useVault();
+  const { setIndexAsset }= useAssets()
 
   // Manage controllers
   const [visibilityStates, setVisibilityStates] = useState<VisibilityState>({});
@@ -174,7 +178,9 @@ const Keymanager = () => {
 
       const receipt = await tx.wait();
       setTransactionStep(3)
-      setIndex(1)
+      setIndexAsset(500)
+      setIndexKey(5700)
+      setIndexVault(7900)
       setArePermissionsChanged(false)
     } catch (err) {
       // First, check if err is an object and has a 'code' property
@@ -420,7 +426,9 @@ const Keymanager = () => {
       const receipt = await tx.wait();
       setTransactionStep(3)
       setSelectedPermissions([''])
-      setIndex(2)
+      setIndexAsset(500)
+      setIndexKey(5700)
+      setIndexVault(7900)
 
     } catch (err) {
       // First, check if err is an object and has a 'code' property

@@ -18,20 +18,30 @@ import LSP8ABI from '@lukso/lsp-smart-contracts/artifacts/LSP8IdentifiableDigita
 import { numberToBytes32 } from "@/app/utils/useBytes32";
 import Tooltip from '@mui/material/Tooltip';
 import TransactionModal from "../modal/TransactionModal";
+import LSP9Vault from '@lukso/lsp-smart-contracts/artifacts/LSP9Vault.json';
+import UniversalProfile from '@lukso/lsp-smart-contracts/artifacts/UniversalProfile.json';
 import { useVault } from "@/GlobalContext/VaultContext/VaultContext";
 import { useKeymanager } from "@/GlobalContext/KeymanagerContext/KeymanagerContext";
 
-const Transfer = ({}) => {
+interface VaultObject {
+  contract: string;
+  name: string;
+  desc: string;
+  tokenBalances: TokenBalances;
+  controllersPermissions: ControllerPermission[];
+  changedPermissions: ControllerPermission[];
+}
+
+const TransferVault = ({ selectedVault } : { selectedVault: VaultObject}) => {
   const { address, isConnected } = useAccount();
-  const { tokenBalances } = useAssets()
   const [isTransferInitiated, setIsTransferInitiated] = useState(false);
   const [tokenType, setTokenType] = useState<string>("LSP7")
   const [transactionStep, setTransactionStep] = useState(1);
-  
+
   const { vaults, setIndexVault } = useVault();
   const { setIndexAsset }= useAssets()
   const { setIndexKey } = useKeymanager()
-
+  
   const [menuSelected, setMenuSelected] = useState<string>("Send");
   const [everythingFilled, setEverythingFilled] = useState<boolean>(false);
   const [recipientAddress, setRecipientAddress] = useState<string>("");
@@ -73,12 +83,12 @@ const Transfer = ({}) => {
   const [isDropDownOpen, setIsDropDownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   
-  const filteredLSP7Tokens = tokenBalances.LSP7.filter(token => 
+  const filteredLSP7Tokens = selectedVault.tokenBalances.LSP7.filter(token => 
     token.Name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     token.Symbol.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  const filteredLSP8Tokens = tokenBalances.LSP8.filter(token => 
+  const filteredLSP8Tokens = selectedVault.tokenBalances.LSP8.filter(token => 
     token.Name.toLowerCase().includes(searchQuery.toLowerCase()) || 
     token.Symbol.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -122,9 +132,20 @@ const Transfer = ({}) => {
 
     const provider = new ethers.providers.Web3Provider(window.lukso);
     const signer = provider.getSigner();
+    console.log(selectedVault.contract)
+    const vault = new ethers.Contract(selectedVault.contract, LSP9Vault.abi);
+    const universalProfile = new ethers.Contract(
+      address || '',
+      UniversalProfile.abi,
+    );
+
+    // Target Contracts
+    console.log("INSTANCE", selectedAsset.Address)
+    const LSP8contract = new ethers.Contract(selectedAsset.Address, LSP8ABI.abi);
+    const LSP7contract = new ethers.Contract(selectedAsset.Address, LSP7ABI.abi);
 
     const isEOA = async(address: string) => {
-      try {
+      try { 
           // Get the bytecode at the address
           const bytecode = await provider.getCode(address);
   
@@ -146,13 +167,10 @@ const Transfer = ({}) => {
           return;
       }
 
-      const LSP8contract = new ethers.Contract(selectedAsset.Address, LSP8ABI.abi, signer);
-      const LSP7contract = new ethers.Contract(selectedAsset.Address, LSP7ABI.abi, signer);
-
       setIsTransferInitiated(true)
       if (selectedAsset.Address === "0x") {
         try {
-          const tx = await signer.sendTransaction({
+          const tx = await signer.sendTransaction({ 
             from: address,
             to: recipientAddress,
             value: ethers.utils.parseEther(sendAmount)
@@ -196,7 +214,19 @@ const Transfer = ({}) => {
       } else {
         if (isNFTSelected) {
           try {
-            const transaction = await LSP8contract.transfer(address, recipientAddress, numberToBytes32(Number(selectedTokenId)), safeTransfer, '0x');
+            const targetCalldata = LSP8contract.interface.encodeFunctionData(
+              'transfer',
+              [vault.address, recipientAddress, numberToBytes32(Number(selectedTokenId)), safeTransfer, '0x'],
+            );
+
+            const vaultCalldata = vault.interface.encodeFunctionData('execute', [
+              0,
+              LSP8contract.address,
+              0,
+              targetCalldata,
+            ]);
+
+            const transaction = await universalProfile.connect(signer).execute(0, selectedVault.contract, 0, vaultCalldata);
             await transaction.wait();
             notify("NFT transferred", NotificationType.Success)
             setTransactionStep(3)
@@ -233,8 +263,20 @@ const Transfer = ({}) => {
         } else {
           try {
             const amount = ethers.utils.parseUnits(sendAmount, 'ether');
+
+            const targetCalldata = LSP7contract.interface.encodeFunctionData(
+              'transfer',
+              [vault.address, recipientAddress, amount, safeTransfer, '0x'],
+            );
+
+            const vaultCalldata = vault.interface.encodeFunctionData('execute', [
+              0,
+              selectedAsset.Address,
+              0,
+              targetCalldata,
+            ]);
           
-            const transaction = await LSP7contract.transfer(address, recipientAddress, amount, safeTransfer, '0x');
+            const transaction = await universalProfile.connect(signer).execute(0, vault.address, 0, vaultCalldata);
             setIsTransferInitiated(true)
             await transaction.wait();
             notify("Token transferred", NotificationType.Success)
@@ -243,9 +285,9 @@ const Transfer = ({}) => {
             setRecipientAddress('')
             setSendAmount('')
             setEverythingFilled(false)
-            setIndexAsset(500)
-            setIndexKey(5700)
-            setIndexVault(7900)
+            setIndexAsset(1070)
+            setIndexKey(1070)
+            setIndexVault(1080)
           } catch (err) {
             // First, check if err is an object and has a 'code' property
             if (typeof err === 'object' && err !== null && 'code' in err) {
@@ -270,7 +312,7 @@ const Transfer = ({}) => {
             }
           }
         }
-      }
+      } 
     } catch (error) {
       console.error("Error determening EOA:", error);
     }
@@ -325,8 +367,8 @@ const Transfer = ({}) => {
                           />
     
                           {isDropDownOpen && (
-                            tokenBalances ? (
-                              <div className="absolute inset-0 sm:h-[150vh] base:h-[149vh] lg:h-[127vh] bg-black bg-opacity-50 z-50 flex h-full justify-center items-center">
+                            selectedVault.tokenBalances ? (
+                              <div className="absolute inset-0 sm:h-[155vh] lg:h-[130vh] bg-black bg-opacity-50 z-50 flex h-full justify-center items-center">
                                 <div className="flex flex-col bg-background gap-8 px-4 py-8 lg:ml-[250px] sm:mt-[200px] lg:mt-[-150px] rounded-10 shadow">
                                   <div className="flex w-full justify-evenly items-center text-purple font-bold">
                                     <div className="w-full text-center text-medium">Select asset to send</div>
@@ -442,16 +484,16 @@ const Transfer = ({}) => {
                   isConnected ? (
                     <div className="flex flex-col gap-4">
                       <div className="flex flex-col gap-2">
-                        <h1 className="text-lightPurple font-bold">Account</h1>
-                        <input type="text" placeholder="Enter address..." readOnly={true} value={formatAddress(address || "0x0")} className="border border-lightPurple border-opacity-50 focus:outline-purple px-4 text-xsmall rounded-10 py-4 pointer-events-none"/>
+                        <h1 className="text-lightPurple font-bold">Vault Address</h1>
+                        <input type="text" placeholder="Enter address..." readOnly={true} value={formatAddress(selectedVault.contract || "0x0")} className="border border-lightPurple border-opacity-50 focus:outline-purple px-4 text-xsmall rounded-10 py-4 pointer-events-none"/>
                       </div>
       
                       <div className="flex justify-center py-4">
-                        {address && <QRCode value={address} />}
+                        {selectedVault.contract && <QRCode value={selectedVault.contract} />}
                       </div>
                       <div
                         className="flex justify-center items-center gap-2 text-center py-2 rounded-15 border border-lightPurple text-purple hover:cursor-pointer"
-                        onClick={() => {copyToClipboard(address); notify("Address Copied", NotificationType.Success)}}
+                        onClick={() => {copyToClipboard(selectedVault.contract); notify("Address Copied", NotificationType.Success)}}
                       >
                         <Image src={copy} width={18} height={18} alt="Copy Address "/>
                         <div>Copy Address</div>
@@ -473,4 +515,4 @@ const Transfer = ({}) => {
   )
 }
 
-export default Transfer
+export default TransferVault

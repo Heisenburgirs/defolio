@@ -13,7 +13,7 @@ function Header () {
   return (
     <div className="flex justify-between items-center sm:px-4 sm:py-6 md:px-8 md:py-4 bg-white shadow">
       <div className="w-full flex justify-between items-center text-purple">
-        <Link href="/" className="text-xl font-bold text-purple">DeFolio</Link>
+        <Link href="/" className="text-xl font-bold text-purple">Profile</Link>
         <div className="text-purple">
           {isHome ?
           (

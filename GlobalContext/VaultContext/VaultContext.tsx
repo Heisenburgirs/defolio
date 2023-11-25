@@ -25,14 +25,14 @@ interface VaultObject {
 interface VaultData {
   vaults: VaultObject[];
   isLoading: boolean;
-  setIndex: React.Dispatch<React.SetStateAction<number>>;
+  setIndexVault: React.Dispatch<React.SetStateAction<number>>;
   setVaults: React.Dispatch<React.SetStateAction<VaultObject[]>>,
 }
 
 const initialState: VaultData = {
   vaults: [],
   isLoading: false,
-  setIndex: () => {},
+  setIndexVault: () => {},
   setVaults: () => {},
 };
 
@@ -45,7 +45,7 @@ interface VaultProviderProps {
 export const VaultProvider: React.FC<VaultProviderProps> = ({ children }) => {
   const { address, isConnected } = useAccount();
   const [isLoading, setIsLoading] = useState(false);
-  const [index, setIndex] = useState(0)
+  const [indexVault, setIndexVault] = useState(0)
 
   const { data, isError } = useBalance({
     address: address,
@@ -293,10 +293,10 @@ export const VaultProvider: React.FC<VaultProviderProps> = ({ children }) => {
     if (isConnected) {
       fetchVaults()
     }
-  }, [address, isConnected, index])
+  }, [address, isConnected, indexVault])
   
   return (
-    <VaultContext.Provider value={{ vaults, setVaults, isLoading, setIndex }}>
+    <VaultContext.Provider value={{ vaults, setVaults, isLoading, setIndexVault }}>
       {children}
     </VaultContext.Provider>
   );

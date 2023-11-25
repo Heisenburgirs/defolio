@@ -80,7 +80,7 @@ const config: Config = {
 
         // Keymanager Add Controller
         'fade-in': 'fadeIn 0.2s ease-in-out forwards',
-        'fade-out': 'fadeOut 0.2s ease-in-out forwards'
+        'fade-out': 'fadeOut 0.2s ease-in-out forwards',
       },
     },
     colors: {
