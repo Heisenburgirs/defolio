@@ -8,6 +8,10 @@ import { useSessionKeys } from "@/GlobalContext/SessionContext/SessionContext";
 import { useEffect, useState } from "react";
 import Image from 'next/image'
 import loading from '@/public/loading.gif'
+import { NotificationType, notify } from "../toast/Toast";
+import { isValidEthereumAddress } from "@/app/utils/useIsValidEthereumAddress";
+import lightPurpleArrow from '@/public/icons/lightPurple_arrow.png';
+import purpleArrow from '@/public/icons/purple_arrow.png';
 
 const Session = () => {
   const { address } = useAccount()
@@ -18,6 +22,37 @@ const Session = () => {
   const [isDeploying, setIsDeploying] = useState(true);
   const [isSettingData, setIsSettingData] = useState(false);
   const [isSessionSetup, setIsSessionSetup] = useState(false);
+  const [isGrantingSession, setIsGrantingSession] = useState(false);
+  const [grantTransactionInit, setGrantTransactionInit] = useState(false);
+  const [grantSessionSuccess, setGrantSessionSuccess] = useState(false);
+
+  const [grantSessionAddress, setGrantSessionAddress] = useState('');
+  const [hasProvidedAddress, setHasProvidedAddress] = useState<boolean>(false);
+  const [hasProvidedTime, setHasProvidedTime] = useState<boolean>(false);
+  const [sessionTime, setSessionTime] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const [hover, setHover] = useState(false);
+
+  type TimeUnit = 'seconds' | 'minutes' | 'hours' | 'days';
+  const [selectedOption, setSelectedOption] = useState<TimeUnit>('hours');
+
+  const timeUnitMultipliers: Record<TimeUnit, number> = {
+    seconds: 1,
+    minutes: 60,
+    hours: 3600,
+    days: 86400
+  };
+
+  const options = ['seconds', 'minutes', 'hours', 'days'];
+  
+  const toggleDropdown = () => setIsOpen(!isOpen);
+
+  //@ts-ignore
+  const handleOptionClick = (option) => {
+      setSelectedOption(option);
+      setIsOpen(false);
+  };
+
 
   useEffect(() => {
     if (sessionAddress) {
@@ -42,6 +77,7 @@ const Session = () => {
       console.log("Contract deployed to address:", sessionAddress);
 
       try {
+        setIsSettingData(true)
         const erc725 = new ERC725(
           SessionKeys,
           address,
@@ -77,25 +113,102 @@ const Session = () => {
 
           const txResult = await setData.wait()
 
-          const sessionKeysAddresses = await erc725.getData('SessionKeys[]');
-          console.log("sessionKeysAddresses", sessionKeysAddresses);
-      } catch (error) {
-        console.error("Error setting data", error);
+          setIsSessionSetup(true)
+          setIndexKey(10)
+      } catch (err) {
+        // First, check if err is an object and has a 'code' property
+        if (typeof err === 'object' && err !== null && 'code' in err) {
+          // Now TypeScript knows err is an object and has a 'code' property
+          const errorCode = (err as { code: unknown }).code;
+          if (errorCode === 4001) {
+            // Handle user's rejection
+            console.log("User declined the transaction");
+            notify("Signature Declined", NotificationType.Error);
+          } else {
+            // Handle other errors
+            console.log("ERROR SETTING DATA ON UP", err);
+            notify("Error Setting Data", NotificationType.Error);
+          }
+        } else {
+          // Handle the case where err is not an object or doesn't have 'code'
+          console.log("An unexpected error occurred", err);
+        }
       }
 
-    } catch (error) {
-        console.error("Error deploying contract:", error);
+    } catch (err) {
+      // First, check if err is an object and has a 'code' property
+      if (typeof err === 'object' && err !== null && 'code' in err) {
+        // Now TypeScript knows err is an object and has a 'code' property
+        const errorCode = (err as { code: unknown }).code;
+        if (errorCode === 4001) {
+          // Handle user's rejection
+          console.log("User declined the transaction");
+          notify("Signature Declined", NotificationType.Error);
+        } else {
+          // Handle other errors
+          console.log("ERROR DEPLOYING SESSION MANAGER", err);
+          notify("Error Deploying Session Manager", NotificationType.Error);
+        }
+      } else {
+        // Handle the case where err is not an object or doesn't have 'code'
+        console.log("An unexpected error occurred", err);
+      }
     }
   }
 
+  const calculateSessionDuration = () => {
+    const inputNumber = parseInt(sessionTime, 10);
+    if (isNaN(inputNumber) || inputNumber <= 0) {
+        return 0;
+    }
+
+    return inputNumber * timeUnitMultipliers[selectedOption];
+  };
+
+
   const grantSession = async () => {
+    if (!sessionTime) {
+      notify("Provide Session Time", NotificationType.Error);
+    }
+
+    setGrantTransactionInit(true)
+
     const provider = new ethers.providers.Web3Provider(window.lukso);
     
     const signer = provider.getSigner();
 
-    const contractInstace = new ethers.Contract("0xdAB89b82973a71d75d4630Ee2217BC984DB05830", SessionKeysContract.abi, signer)
-    const durationInSeconds = 60;
-    const session = contractInstace.grantSession("0xD424FA141a6B75AA8F64be6c924aA2b314B927B3", durationInSeconds)
+    if (sessionAddress) {
+      try {
+        const contractInstace = new ethers.Contract(sessionAddress[0], SessionKeysContract.abi, signer)
+    
+        const sessionDuration = calculateSessionDuration();
+    
+        console.log("grantSessionAddress", sessionAddress[0])
+        console.log("sessionDuration", sessionDuration)
+        const session = contractInstace.grantSession(grantSessionAddress, sessionDuration)
+
+        setGrantSessionSuccess(true)
+
+      } catch (err) {
+        // First, check if err is an object and has a 'code' property
+        if (typeof err === 'object' && err !== null && 'code' in err) {
+          // Now TypeScript knows err is an object and has a 'code' property
+          const errorCode = (err as { code: unknown }).code;
+          if (errorCode === 4001) {
+            // Handle user's rejection
+            console.log("User declined the transaction");
+            notify("Signature Declined", NotificationType.Error);
+          } else {
+            // Handle other errors
+            console.log("ERROR GRANTING SESSION", err);
+            notify("Error Granting Session", NotificationType.Error);
+          }
+        } else {
+          // Handle the case where err is not an object or doesn't have 'code'
+          console.log("An unexpected error occurred", err);
+        }
+      }
+    }
   }
 
   const executeSessionTransfer = async () => {
@@ -142,24 +255,127 @@ const Session = () => {
       :
       (
         hasDeployedSession ? (
-          <div className="flex flex-col w-full gap-6">
-            <div className="flex w-full justify-between items-center">
-              <div className="flex flex-col gap-[2px]">
-                <div className="text-medium font-bold text-purple">Session Keys</div>
-                <div className="text-lightPurple">Manage 3rd party sessions</div>
+          isGrantingSession ? (
+            grantTransactionInit ?(
+              <div className="flex flex-col items-center justify-center w-full gap-6">
+                {
+                  grantSessionSuccess ? (
+                    <div className="success-animation"></div>
+                  )
+                  :
+                  (
+                    <div className="loading opacity-75 w-full flex justify-center p-16">
+                      <span className="loading__dot"></span>
+                      <span className="loading__dot"></span>
+                      <span className="loading__dot"></span>
+                    </div>
+                  )
+                }
+      
+                <div className="font-bold text-purple text-medium">{grantSessionSuccess ? "Session Granted" : "Waiting for Confirmation"}</div>
+                {grantSessionSuccess && <button className="bg-lightPurple rounded-15 py-3 px-16 text-white" onClick={() => {setIsGrantingSession(false)}}>Back</button>}
               </div>
-              <div className="flex py-2 px-4 text-lightPurple border border-lightPurple rounded-15 hover:cursor-pointer hover:bg-lightPurple hover:text-white transition">
-                Add Session
+            )
+            :
+            (
+              <div className="flex flex-col w-full h-full items-start px-8 gap-12">
+                <div className="flex flex-col gap-6 items-start">
+                  <div
+                  className="flex gap-2 items-center text-lightPurple hover:text-purple hover:cursor-pointer transition text-small"
+                  onMouseEnter={() => setHover(true)}
+                  onMouseLeave={() => setHover(false)}
+                  onClick={() => {setIsGrantingSession(false)}}
+                >
+                  <div 
+                    className="transition ease-in-out duration-200"
+                  >
+                    <Image 
+                      src={hover ? purpleArrow : lightPurpleArrow} 
+                      width={24} 
+                      height={24} 
+                      alt="Back"
+                      className="hover:cursor-pointer"
+                    />
+                  </div>
+                  <div>Back</div>
+                </div>
+                  <h1 className="text-medium font-bold text-purple">Grant Session</h1>
+                  <div className="flex flex-col gap-2">
+                    <div className="text-lightPurple font-bold">Address</div>
+                    <input 
+                      type="text" 
+                      placeholder="Enter address..." 
+                      className="px-4 py-2 sm:w-[200px] base:w-[350px] md:w-[500px] border border-lightPurple rounded-15 focus:outline-purple"
+                      onChange={(e) => { setGrantSessionAddress(e.target.value); setHasProvidedAddress(isValidEthereumAddress(e.target.value));}}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <div className="text-lightPurple font-bold">Session</div>
+                    <div className="flex gap-4">
+                      <input 
+                        type="number" 
+                        placeholder="Session Time..." 
+                        className="px-4 py-2 sm:w-[200px] base:w-[350px] md:w-[500px] border border-lightPurple rounded-15 focus:outline-purple"
+                        onChange={(e) => { setSessionTime(e.target.value); setHasProvidedTime(isValidEthereumAddress(e.target.value));}}
+                      />
+                      <div className="relative w-48">
+                        <div className="cursor-pointer p-2 border border-lightPurple rounded-15 px-6" onClick={toggleDropdown}>
+                            {selectedOption}
+                            <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                                {/* Dropdown Icon */}
+                            </span>
+                        </div>
+  
+                        {isOpen && (
+                            <div className="absolute z-10 w-full mt-1 bg-white border border-lightPurple rounded-15 px-2">
+                                {options.map((option, index) => (
+                                    <div 
+                                        key={index} 
+                                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                        onClick={() => handleOptionClick(option)}
+                                    >
+                                        {option}
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <button 
+                  className={
+                    `py-2 px-6 bg-lightPurple bg-opacity-75 text-medium rounded-15 text-white transition
+                    ${hasProvidedAddress ? 'bg-purple bg-opacity-100 hover:cursor-pointer' : 'cursor-not-allowed opacity-50'}`
+                  }
+                  onClick={grantSession}
+                  disabled={!hasProvidedAddress && !hasProvidedTime}
+                >
+                  Finalize Session
+                </button>
               </div>
+            )
+          )
+          :
+          (
+            <div className="flex flex-col w-full gap-6">
+              <div className="flex w-full justify-between items-center">
+                <div className="flex flex-col gap-[2px]">
+                  <div className="text-medium font-bold text-purple">Session Keys</div>
+                  <div className="text-lightPurple">Manage 3rd party sessions</div>
+                </div>
+                <div onClick={() => {setIsGrantingSession(true)}} className="flex py-2 px-4 text-lightPurple border border-lightPurple rounded-15 hover:cursor-pointer hover:bg-lightPurple hover:text-white transition">
+                  Grant Session
+                </div>
+              </div>
+              <div>
+  
+              </div>
+                <div className="flex bg-black rounded-15 py-2 px-4 hover:cursor-pointer text-white" onClick={deploy}>Deploy</div>
+                <div className="flex bg-black rounded-15 py-2 px-4 hover:cursor-pointer text-white" onClick={grantSession}>Grant permission</div>
+                <div className="flex bg-black rounded-15 py-2 px-4 hover:cursor-pointer text-white" onClick={executeSessionTransfer}>EXECUTE</div>
             </div>
-            <div>
-
-            </div>
-              <div className="flex bg-black rounded-15 py-2 px-4 hover:cursor-pointer text-white" onClick={deploy}>Deploy</div>
-              <div className="flex bg-black rounded-15 py-2 px-4 hover:cursor-pointer text-white" onClick={grantSession}>Grant permission</div>
-              <div className="flex bg-black rounded-15 py-2 px-4 hover:cursor-pointer text-white" onClick={executeSessionTransfer}>EXECUTE</div>
-
-          </div>
+          )
         )
         :
         (

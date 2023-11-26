@@ -49,6 +49,9 @@ export const SessionKeysprovider: React.FC<SessionProviderProps> = ({ children }
   
   const fetchSessionKeys = async () => {
     setIsLoading(true)
+    const provider = new ethers.providers.Web3Provider(window.lukso);
+    
+    const signer = provider.getSigner();
     const sessionKeysAddresses = await erc725.getData('SessionKeys[]');
     console.log("sessionKeysAddresses", sessionKeysAddresses);
 
@@ -61,7 +64,9 @@ export const SessionKeysprovider: React.FC<SessionProviderProps> = ({ children }
       addresses = [sessionKeysAddresses.value]; // If it's a single string, make it an array
     }
 
-    const contractInstace = new ethers.Contract(addresses[0], SessionKeysContract.abi)
+    console.log(addresses)
+    console.log(addresses[0])
+    const contractInstace = new ethers.Contract(addresses[0], SessionKeysContract.abi, signer)
 
     const getSessionedAddresses = await contractInstace.getAllGrantedSessionAddresses()
 
@@ -89,7 +94,7 @@ export const SessionKeysprovider: React.FC<SessionProviderProps> = ({ children }
     if (isConnected) {
       fetchSessionKeys();
     }
-  }, [address, indexKey]);
+  }, [address, isConnected, indexKey]);
   
   return (
     <SessionKeysContext.Provider value={{ setIndexKey, sessionAddress, sessionedAddresses, isLoading }}>
