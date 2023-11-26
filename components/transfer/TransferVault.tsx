@@ -132,17 +132,16 @@ const TransferVault = ({ selectedVault } : { selectedVault: VaultObject}) => {
 
     const provider = new ethers.providers.Web3Provider(window.lukso);
     const signer = provider.getSigner();
-    console.log(selectedVault.contract)
-    const vault = new ethers.Contract(selectedVault.contract, LSP9Vault.abi);
+    const vault = new ethers.Contract(selectedVault.contract, LSP9Vault.abi, signer);
     const universalProfile = new ethers.Contract(
       address || '',
       UniversalProfile.abi,
+      signer,
     );
 
     // Target Contracts
-    console.log("INSTANCE", selectedAsset.Address)
-    const LSP8contract = new ethers.Contract(selectedAsset.Address, LSP8ABI.abi);
-    const LSP7contract = new ethers.Contract(selectedAsset.Address, LSP7ABI.abi);
+    const LSP8contract = new ethers.Contract(selectedAsset.Address, LSP8ABI.abi, signer);
+    const LSP7contract = new ethers.Contract(selectedAsset.Address, LSP7ABI.abi, signer);
 
     const isEOA = async(address: string) => {
       try { 
@@ -170,14 +169,24 @@ const TransferVault = ({ selectedVault } : { selectedVault: VaultObject}) => {
       setIsTransferInitiated(true)
       if (selectedAsset.Address === "0x") {
         try {
-          const tx = await signer.sendTransaction({ 
+          /*const tx = await signer.sendTransaction({ 
             from: address,
             to: recipientAddress,
             value: ethers.utils.parseEther(sendAmount)
-          });
+          });*/
 
-          // Wait for the transaction to be mined
-          const receipt = await tx.wait();
+          // Encode the calldata for the Vault to execute the LYX transfer
+          const vaultCalldata = vault.interface.encodeFunctionData('execute', [
+            0, // Operation type for a native transfer
+            recipientAddress, // Recipient address for LYX
+            ethers.utils.parseEther(sendAmount), // Amount of LYX to transfer
+            '0x' // Empty calldata
+          ]);
+
+          // Execute the calldata through the Universal Profile
+          const tx = await universalProfile.connect(signer).execute(0, selectedVault.contract, 0, vaultCalldata);
+
+          await tx.wait();
           
           setTransactionStep(3)
           notify("LYX transferred", NotificationType.Success)
@@ -328,7 +337,7 @@ const TransferVault = ({ selectedVault } : { selectedVault: VaultObject}) => {
             <div className="flex mt-48">
               <TransactionModal
                 successMsg={`${isNFTSelected ? "NFT" : "Token"} Transferred`}
-                onBackButtonClick={() => {setIsTransferInitiated(false)}} 
+                onBackButtonClick={() => {setIsTransferInitiated(false); setTransactionStep(1)}} 
                 transactionStep={transactionStep}
                 setTransactionStep={setTransactionStep}
                 message1='Waiting for Confirmation'

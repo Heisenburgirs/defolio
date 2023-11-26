@@ -235,7 +235,6 @@ const Vault = () => {
 
           const txResult = await setData.wait()
 
-          console.log("RESULTS ARE IN", txResult);
           setIndexAsset(100)
           setIndexKey(100)
           setIndexVault(100)

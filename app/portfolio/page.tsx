@@ -8,20 +8,22 @@ import '../globals.css';
 import Navbar from '@/components/navbar/Navbar';
 
 // Assets
-import Assets from '@/components/assets/Assets'
+import Assets from '@/components/assets/Assets';
 
 // Keymanager
-import Keymanager from '@/components/keymanager/Keymanager'
+import Keymanager from '@/components/keymanager/Keymanager';
 
 // Send
 import Transfer from '@/components/transfer/Transfer';
 
-// Notification
-import Notifications from '@/components/notifications/Notifications';
+// Vault
 import Vault from '@/components/vault/Vault';
 
+// Session Keys
+import Session from '@/components/session/SessionKeys';
+
 // Navbar Menu
-const menuItems = ["Assets", "Key Manager", "Vault", "Guardians", "Inheritance", "Carbon", "Send", "Notifications"];
+const menuItems = ["Assets", "Key Manager", "Vault", "Guardians", "Session Keys", "Inheritance", "Carbon", "Send"];
 
 export default function Portfolio() {
 
@@ -68,12 +70,12 @@ export default function Portfolio() {
           <Transfer />
         }
         {
-          selectedMenuItem == "Notifications" && 
-          <Notifications />
-        }
-        {
           selectedMenuItem == "Vault" &&
           <Vault />
+        }
+        {
+          selectedMenuItem == "Session Keys" &&
+          <Session />
         }
       </section>
     </main>
