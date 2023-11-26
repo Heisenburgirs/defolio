@@ -3,6 +3,8 @@ import { useAccount } from 'wagmi';
 import LSP6Schema from '@erc725/erc725.js/schemas/LSP6KeyManager.json';
 import ERC725, { ERC725JSONSchema } from '@erc725/erc725.js';
 import { SessionKeys } from '@/components/schema/SessionKeys';
+import { ethers } from 'ethers';
+import SessionKeysContract from '../../contracts/SessionAbi.json'
 
 interface SessionedAddress {
   address: string,
@@ -13,12 +15,14 @@ interface SessionedAddress {
 interface SessionKeysAddresses {
   sessionAddress: string[] | undefined;
   sessionedAddresses: SessionedAddress[] | undefined;
+  isLoading: boolean;
   setIndexKey: React.Dispatch<React.SetStateAction<number>>;
 }
 
 const initialState: SessionKeysAddresses = {
   sessionAddress: [],
   sessionedAddresses: [],
+  isLoading: true,
   setIndexKey: () => {},
 };
 
@@ -57,6 +61,24 @@ export const SessionKeysprovider: React.FC<SessionProviderProps> = ({ children }
       addresses = [sessionKeysAddresses.value]; // If it's a single string, make it an array
     }
 
+    const contractInstace = new ethers.Contract(addresses[0], SessionKeysContract.abi)
+
+    const getSessionedAddresses = await contractInstace.getAllGrantedSessionAddresses()
+
+    const allSessionedAddresses = [];
+
+    // Loop over each address and get its session details
+    for (const address of getSessionedAddresses) {
+      const sessionData = await contractInstace.sessions(address);
+      const sessionObj = {
+        address: address,
+        startTime: sessionData[0].toString(), // Convert BigNumber to string
+        session: sessionData[1].toString()   // Convert session duration to string
+      };
+      allSessionedAddresses.push(sessionObj);
+    }
+
+    setSessionedAddresses(allSessionedAddresses)
     setSessionAddress(addresses)
 
     setIsLoading(false)
@@ -70,7 +92,7 @@ export const SessionKeysprovider: React.FC<SessionProviderProps> = ({ children }
   }, [address, indexKey]);
   
   return (
-    <SessionKeysContext.Provider value={{ setIndexKey, sessionAddress, sessionedAddresses }}>
+    <SessionKeysContext.Provider value={{ setIndexKey, sessionAddress, sessionedAddresses, isLoading }}>
       {children}
     </SessionKeysContext.Provider>
   );

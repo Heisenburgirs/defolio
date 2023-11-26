@@ -63,4 +63,8 @@ contract SessionContract is Ownable {
         Session memory session = sessions[delegate];
         return block.timestamp <= session.startTime + session.duration;
     }
+
+    function getAllGrantedSessionAddresses() public view returns (address[] memory) {
+        return grantedSessionAddresses;
+    }
 }

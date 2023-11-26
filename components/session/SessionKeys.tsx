@@ -4,11 +4,29 @@ import SessionKeysContract from '../../contracts/SessionAbi.json';
 import { SessionKeys } from '../schema/SessionKeys'
 import ERC725 from "@erc725/erc725.js";
 import UniversalProfile from '@lukso/lsp-smart-contracts/artifacts/UniversalProfile.json';
+import { useSessionKeys } from "@/GlobalContext/SessionContext/SessionContext";
+import { useEffect, useState } from "react";
+import Image from 'next/image'
+import loading from '@/public/loading.gif'
 
 const Session = () => {
   const { address } = useAccount()
+  const { setIndexKey, sessionAddress, sessionedAddresses, isLoading } = useSessionKeys()
+
+  const [hasDeployedSession, setHasDeployedSession] = useState(false);
+
+  const [isDeploying, setIsDeploying] = useState(true);
+  const [isSettingData, setIsSettingData] = useState(false);
+  const [isSessionSetup, setIsSessionSetup] = useState(false);
+
+  useEffect(() => {
+    if (sessionAddress) {
+      setHasDeployedSession(true)
+    }
+  }, [sessionAddress])
 
   const deploy = async () => {
+    setIsDeploying(true)
     const provider = new ethers.providers.Web3Provider(window.lukso);
     
     const signer = provider.getSigner();
@@ -75,13 +93,9 @@ const Session = () => {
     
     const signer = provider.getSigner();
 
-    const contractInstace = new ethers.Contract("0x37A736d48B0723222489499062EbD7Be36Ed2342", SessionKeysContract.abi, signer)
+    const contractInstace = new ethers.Contract("0xdAB89b82973a71d75d4630Ee2217BC984DB05830", SessionKeysContract.abi, signer)
     const durationInSeconds = 60;
-    //const session = contractInstace.grantSession("0xB391906bC3b1E432943916b2fC18393Bc1Fad390", durationInSeconds)
-
-    const getSession = await contractInstace.sessions("0xB391906bC3b1E432943916b2fC18393Bc1Fad390")
-    console.log(getSession)
-    console.log('Session granted successfully');
+    const session = contractInstace.grantSession("0xD424FA141a6B75AA8F64be6c924aA2b314B927B3", durationInSeconds)
   }
 
   const executeSessionTransfer = async () => {
@@ -118,24 +132,110 @@ const Session = () => {
 
   return (
     <div className="flex w-full h-full bg-white shadow rounded-15 py-8 px-6">
-      <div className="flex flex-col w-full gap-6">
-        <div className="flex w-full justify-between items-center">
-          <div className="flex flex-col gap-[2px]">
-            <div className="text-medium font-bold text-purple">Session Keys</div>
-            <div className="text-lightPurple">Manage 3rd party sessions</div>
-          </div>
-          <div className="flex py-2 px-4 text-lightPurple border border-lightPurple rounded-15 hover:cursor-pointer hover:bg-lightPurple hover:text-white transition">
-            Add Session
-          </div>
+      {isLoading ? (
+        <div className="loading opacity-75 w-full flex justify-center p-16">
+          <span className="loading__dot"></span>
+          <span className="loading__dot"></span>
+          <span className="loading__dot"></span>
         </div>
-        <div>
+      )
+      :
+      (
+        hasDeployedSession ? (
+          <div className="flex flex-col w-full gap-6">
+            <div className="flex w-full justify-between items-center">
+              <div className="flex flex-col gap-[2px]">
+                <div className="text-medium font-bold text-purple">Session Keys</div>
+                <div className="text-lightPurple">Manage 3rd party sessions</div>
+              </div>
+              <div className="flex py-2 px-4 text-lightPurple border border-lightPurple rounded-15 hover:cursor-pointer hover:bg-lightPurple hover:text-white transition">
+                Add Session
+              </div>
+            </div>
+            <div>
 
-        </div>
-          <div className="flex bg-black rounded-15 py-2 px-4 hover:cursor-pointer text-white" onClick={deploy}>Deploy</div>
-          <div className="flex bg-black rounded-15 py-2 px-4 hover:cursor-pointer text-white" onClick={grantSession}>Grant permission</div>
-          <div className="flex bg-black rounded-15 py-2 px-4 hover:cursor-pointer text-white" onClick={executeSessionTransfer}>EXECUTE</div>
+            </div>
+              <div className="flex bg-black rounded-15 py-2 px-4 hover:cursor-pointer text-white" onClick={deploy}>Deploy</div>
+              <div className="flex bg-black rounded-15 py-2 px-4 hover:cursor-pointer text-white" onClick={grantSession}>Grant permission</div>
+              <div className="flex bg-black rounded-15 py-2 px-4 hover:cursor-pointer text-white" onClick={executeSessionTransfer}>EXECUTE</div>
 
-      </div>
+          </div>
+        )
+        :
+        (
+          isDeploying ?
+          (
+            isSettingData ? (
+              isSessionSetup ? (
+                  <div className="flex flex-col w-full h-full items-center justify-center gap-8">
+                      <div className="flex flex-col items-center gap-4">
+                          <div className="success-animation"></div>
+                          <div className="text-medium text-purple font-bold">All Done!</div>
+                      </div>
+                      <button className="bg-lightPurple rounded-15 py-3 px-16 text-white" onClick={() => {setHasDeployedSession(true)}}>Continue</button>
+                  </div>
+              ) : (
+                <div className="flex flex-col w-full h-full items-center justify-center">
+                  <div className="flex flex-col w-full justify-center items-center">
+                    <div className="loading opacity-75 w-full flex justify-center p-16">
+                      <span className="loading__dot"></span>
+                      <span className="loading__dot"></span>
+                      <span className="loading__dot"></span>
+                    </div>
+                  </div>
+                  <div className="text-medium text-purple font-bold">Setting Data on UP</div>
+                </div>
+              )
+            ) : (
+              <div className="flex flex-col w-full h-full items-center justify-center">
+                <div className="flex flex-col w-full justify-center items-center">
+                  <div className="loading opacity-75 w-full flex justify-center p-16">
+                    <span className="loading__dot"></span>
+                    <span className="loading__dot"></span>
+                    <span className="loading__dot"></span>
+                  </div>
+                </div>
+                <div className="text-medium text-purple font-bold">Deploying Session Manager</div>
+              </div>
+            )
+          )
+          :
+          (
+            <div className="flex flex-col px-12 gap-8">
+              <div className="flex flex-col gap-2">
+                <div className="text-large font-bold text-purple">Session Keys</div>
+                <div className="text-lightPurple">Session keys in Web3 enhance security by allowing limited transaction permissions without exposing main private keys, reducing the risk of key compromise in the decentralized ecosystem.</div>
+              </div>
+  
+              <div className="flex flex-col gap-6 items-start">
+                <div className="text-lightPurple font-bold">
+                  Session keys in Web3 can be effectively used in various sectors:
+                </div>
+                <ul className="flex flex-col gap-2 text-lightPurple">
+                  <li>
+                    <span className="font-bold">Gaming:</span> Secure asset management.
+                  </li>
+                  <li>
+                    <span className="font-bold">DeFi:</span> Safe transaction delegation.
+                  </li>
+                  <li>
+                    <span className="font-bold">NFT Marketplaces:</span> Controlled marketplace interaction.
+                  </li>
+                  <li>
+                    <span className="font-bold">DAOs:</span> Governance participation security.
+                  </li>
+                </ul>
+  
+                <button disabled={isDeploying} className={`flex text-lightPurple border border-lightPurple rounded-15 hover:cursor-pointer hover:bg-lightPurple hover:text-white py-2 px-6 transition ${isDeploying && "bg-lightPurple text-white opacity-60 hover:cursor-not-allowed"}`}
+                  onClick={deploy}
+                >
+                  Deploy Session Manager
+                </button>
+              </div>
+            </div>
+          )
+        )
+      )}
     </div>
   );
 };
