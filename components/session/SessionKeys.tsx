@@ -13,6 +13,8 @@ import { isValidEthereumAddress } from "@/app/utils/useIsValidEthereumAddress";
 import lightPurpleArrow from '@/public/icons/lightPurple_arrow.png';
 import purpleArrow from '@/public/icons/purple_arrow.png';
 import { formatAddress } from "@/app/utils/useFormatAddress";
+import copy from '@/public/icons/copy.svg';
+import { copyToClipboard } from "@/app/utils/useCopyToCliptboard";
 
 interface VisibilityStates {
   [key: string]: boolean;
@@ -28,7 +30,7 @@ const Session = () => {
   const [hasDeployedSession, setHasDeployedSession] = useState(false);
   const [sessionType, setSessionType] = useState('Active');
 
-  const [isDeploying, setIsDeploying] = useState(true);
+  const [isDeploying, setIsDeploying] = useState(false);
   const [isSettingData, setIsSettingData] = useState(false);
   const [isSessionSetup, setIsSessionSetup] = useState(false);
   const [isGrantingSession, setIsGrantingSession] = useState(false);
@@ -94,7 +96,7 @@ const Session = () => {
   };
 
   useEffect(() => {
-    if (sessionAddress) {
+    if (sessionAddress && sessionAddress.length !== 0) {
       setHasDeployedSession(true)
     }
   }, [sessionAddress])
@@ -520,7 +522,13 @@ const Session = () => {
             <div className="flex flex-col w-full gap-6">
               <div className="flex w-full justify-between items-center">
                 <div className="flex flex-col gap-[2px]">
-                  <div className="text-medium font-bold text-purple">Session Keys</div>
+                  <div className="flex gap-4 items-center">
+                    <div className="text-medium font-bold text-purple">Session Keys</div>
+                    <div onClick={() => {sessionAddress && copyToClipboard(sessionAddress[0]), notify("Address Copied", NotificationType.Success)}} className="flex gap-6 hover:cursor-pointer items-center text-lightPurple hover:text-purple transition">
+                      <div>{sessionAddress && formatAddress(sessionAddress[0])}</div>
+                      <Image src={copy} width={12} height={12} alt="Copy Token Address" className="ml-[-20px]" />
+                    </div>
+                  </div>
                   <div className="text-lightPurple">Manage 3rd party sessions</div>
                 </div>
                 <div onClick={() => {setIsGrantingSession(true)}} className="flex py-2 px-4 text-lightPurple border border-lightPurple rounded-15 hover:cursor-pointer hover:bg-lightPurple hover:text-white transition">

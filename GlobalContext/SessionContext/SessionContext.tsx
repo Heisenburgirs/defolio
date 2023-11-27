@@ -71,6 +71,7 @@ export const SessionKeysprovider: React.FC<SessionProviderProps> = ({ children }
     }
 
     if (addresses && addresses.length === 0) {
+      console.log(addresses)
       setSessionAddress(addresses)
       setIsLoading(false)
     } else {

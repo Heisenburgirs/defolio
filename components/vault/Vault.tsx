@@ -762,7 +762,7 @@ const Vault = () => {
                   Create a Vault
                 </div>
               </div>
-              <div className="flex w-full h-full sm:justify-items-center keymanager:justify-items-start grid sm:grid-cols-1 keymanager:grid-cols-2 md:grid-cols-3 xl:grid-cols-4">
+              <div className={`flex w-full h-full sm:justify-items-center keymanager:justify-items-start grid  ${vaults && vaults.length === 0 ? "grid grid-cols-1" : " sm:grid-cols-1 keymanager:grid-cols-2 md:grid-cols-3 xl:grid-cols-4"}`}>
                 {vaults.map((vault, index) => (
                   <div key={index} className="sm:w-[200px] lg:w-[250px] h-[250px] border border-lightPurple rounded-15 py-6 px-4 flex flex-col justify-between">
                     <div className="flex flex-col gap-2">
@@ -781,7 +781,9 @@ const Vault = () => {
                       className="w-full text-center py-2 rounded-15 border border-lightPurple text-purple hover:cursor-pointer hover:bg-lightPurple hover:text-white transition">Manage</div>
                   </div>
                 ))}
-                
+                {vaults && vaults.length === 0 &&
+                <div className="flex w-full py-8 text-lightPurple font-bold justify-center items-center grid-cols-4">No Vaults Deployed</div>
+                }
               </div>
             </>
           )
