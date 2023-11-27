@@ -24,7 +24,7 @@ DeFolio is an innovative platform developed for the Lukso ecosystem, designed to
 
 # Keymanager
 
-***Controller Display:*** Displays existing controllers and their specific permissions.
+***Controller Insights:*** Displays existing controllers and their specific permissions.
 
 ***Controller Management:*** Users can manage controllers, adding or removing permissions as needed.
 
@@ -46,9 +46,7 @@ DeFolio is an innovative platform developed for the Lukso ecosystem, designed to
 
 ***Permission Granting:*** The UP profile can grant any desired permission to the session contract.
 
-***Session Address Management:*** Users can add addresses to the session contract with a set deadline, granting temporary access to the contract’s permissions.
-
-***Session Management:*** Existing sessions can be updated or terminated, and users can review past sessions.
+***Session Management:*** Users can add addresses to the session contract with a set deadline, granting temporary access to the contract’s permissions. Existing sessions can be updated or terminated, and users can review past sessions.
 
 ## Why DeFolio?
 
