@@ -70,6 +70,11 @@ export const SessionKeysprovider: React.FC<SessionProviderProps> = ({ children }
       addresses = [sessionKeysAddresses.value]; // If it's a single string, make it an array
     }
 
+    if (addresses && addresses.length === 0) {
+      setSessionAddress(addresses)
+      setIsLoading(false)
+    } else {
+
     const contractInstace = new ethers.Contract(addresses[0], SessionKeysContract.abi, signer)
 
     const getSessionedAddresses = await contractInstace.getAllGrantedSessionAddresses()
@@ -98,8 +103,8 @@ export const SessionKeysprovider: React.FC<SessionProviderProps> = ({ children }
 
     setSessionedAddresses(allSessionedAddresses)
     setSessionAddress(addresses)
-
     setIsLoading(false)
+    }
   }
 
   // Fetch addresses with permissions

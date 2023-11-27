@@ -23,7 +23,7 @@ import Vault from '@/components/vault/Vault';
 import Session from '@/components/session/SessionKeys';
 
 // Navbar Menu
-const menuItems = ["Assets", "Key Manager", "Vault", "Guardians", "Session Keys", "Inheritance", "Carbon", "Send"];
+const menuItems = ["Assets", "Key Manager", "Vault", "Session Keys", "Send"];
 
 export default function Portfolio() {
 

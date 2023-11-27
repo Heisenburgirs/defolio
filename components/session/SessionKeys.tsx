@@ -235,7 +235,6 @@ const Session = () => {
         const session = contractInstace.grantSession(grantSessionAddress, sessionDuration)
 
         setGrantSessionSuccess(true)
-
       } catch (err) {
         // First, check if err is an object and has a 'code' property
         if (typeof err === 'object' && err !== null && 'code' in err) {
@@ -265,26 +264,20 @@ const Session = () => {
       const signer = provider.getSigner();
       const myUniversalProfile = new ethers.Contract(address || '', UniversalProfile.abi, signer);
   
-      if (sessionAddress) {
-        const sessionContract = new ethers.Contract(sessionAddress[0], SessionKeysContract.abi, signer);
-    
-        // Convert the amount from LYX to Wei
-        //const amountInWei = ethers.utils.parseEther(.toString());
-    
-        // Prepare the parameters for the execute function
-        const recipientAddress = "0x368731AE2E23e72751C432A935A2CF686Bb72AAC";
-    
-        // Execute the transfer
-        //const transaction = await sessionContract.execute(0, "0xfB8a1f71669B1171dbc50fac869f02223EcfEA8F", 0, sessionCallData);
-        /*const tx = await sessionContract.execute({
-          address,
-          recipientAddress,
-          ethers.utils.parseEther(sendAmount)
-        });*/
-    
-        console.log('LYX transfer executed successfully');
+      const sessionContract = new ethers.Contract("0xdAB89b82973a71d75d4630Ee2217BC984DB05830", SessionKeysContract.abi, signer);
+  
+      const amount = "0.0001";
+      const amountInWei = ethers.utils.parseEther(amount.toString());
+  
+      // Prepare the parameters for the execute function
+      const recipientAddress = address;
+  
+      // Execute the transfer
+      const tx = await sessionContract.execute("0", recipientAddress, amountInWei, "0x");
+  
+      notify("LYX Transferred Successfully", NotificationType.Success)
+      console.log('LYX transfer executed successfully');
 
-      }
     } catch (error) {
       console.error('Error executing session transfer:', error);
     }
@@ -440,7 +433,7 @@ const Session = () => {
                 }
       
                 <div className="font-bold text-purple text-medium">{grantSessionSuccess ? "Session Granted" : "Waiting for Confirmation"}</div>
-                {grantSessionSuccess && <button className="bg-lightPurple rounded-15 py-3 px-16 text-white" onClick={() => {setIsGrantingSession(false)}}>Back</button>}
+                {grantSessionSuccess && <button className="bg-lightPurple rounded-15 py-3 px-16 text-white" onClick={() => {setIsGrantingSession(false); setGrantSessionSuccess(false); setGrantTransactionInit(false)}}>Back</button>}
               </div>
             )
             :
@@ -536,19 +529,22 @@ const Session = () => {
               </div>
               <div>
 
-              <div className="flex w-[200px] gap-2 items-center md:justify-center border border-lightPurple rounded-20 p-[2px]">
-                <div 
-                  onClick={() => setSessionType("Active")} 
-                  className={`sm:w-1/2 text-center text-xsmall text-lightPurple rounded-20 px-4 py-2 hover:cursor-pointer ${sessionType === "Active" ? "bg-purple text-white" : "hover:bg-lightPurple hover:bg-opacity-50 hover:text-white"} transition`}
-                >
-                  Active
+              <div className="flex w-full justify-between items-center">
+                <div className="flex w-[200px] gap-2 items-center md:justify-center border border-lightPurple rounded-20 p-[2px]">
+                  <div 
+                    onClick={() => setSessionType("Active")} 
+                    className={`sm:w-1/2 text-center text-xsmall text-lightPurple rounded-20 px-4 py-2 hover:cursor-pointer ${sessionType === "Active" ? "bg-purple text-white" : "hover:bg-lightPurple hover:bg-opacity-50 hover:text-white"} transition`}
+                  >
+                    Active
+                  </div>
+                  <div 
+                    onClick={() => setSessionType("Expired")} 
+                    className={`sm:w-1/2 text-center text-xsmall text-lightPurple rounded-20 px-6 py-2 hover:cursor-pointer ${sessionType === "Expired" ? "bg-purple text-white" : "hover:bg-lightPurple hover:bg-opacity-50 hover:text-white"} transition`}
+                  >
+                    Expired
+                  </div>
                 </div>
-                <div 
-                  onClick={() => setSessionType("Expired")} 
-                  className={`sm:w-1/2 text-center text-xsmall text-lightPurple rounded-20 px-6 py-2 hover:cursor-pointer ${sessionType === "Expired" ? "bg-purple text-white" : "hover:bg-lightPurple hover:bg-opacity-50 hover:text-white"} transition`}
-                >
-                  Expired
-                </div>
+                <div className="text-purple border border-purple hover:bg-purple rounded-15 py-2 px-4 hover:cursor-pointer hover:text-white text-center items-center justify-center transition" onClick={executeSessionTransfer}>Transfer 0.001 LYX</div>
               </div>
               <div className={`flex flex-col gap-6 h-full bg-white rounded-15 py-8 transition`}>
                 {
@@ -630,9 +626,6 @@ const Session = () => {
               </div>
 
               </div>
-                <div className="flex bg-black rounded-15 py-2 px-4 hover:cursor-pointer text-white" onClick={deploy}>Deploy</div>
-                <div className="flex bg-black rounded-15 py-2 px-4 hover:cursor-pointer text-white" onClick={grantSession}>Grant permission</div>
-                <div className="flex bg-black rounded-15 py-2 px-4 hover:cursor-pointer text-white" onClick={executeSessionTransfer}>EXECUTE</div>
             </div>
           )
         )
