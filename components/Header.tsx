@@ -17,7 +17,7 @@ function Header () {
         <div className="text-purple">
           {isHome ?
           (
-            <a href="https://github.com/Heisenburgirs?tab=repositories" target="_blank" className="sm:text-xxsmall base:text-small">/* Made by Heisen 🍔 */</a>
+            <a href="https://github.com/Heisenburgirs?tab=repositories" target="_blank" className="sm:text-xxsmall base:text-small">Made by Heisen 🍔</a>
           )
           :
           (

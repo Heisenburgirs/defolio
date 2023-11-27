@@ -234,7 +234,7 @@ const Session = () => {
     
         console.log("grantSessionAddress", sessionAddress[0])
         console.log("sessionDuration", sessionDuration)
-        const session = contractInstace.grantSession(grantSessionAddress, sessionDuration)
+        const session = await contractInstace.grantSession(grantSessionAddress, sessionDuration)
 
         setGrantSessionSuccess(true)
       } catch (err) {
@@ -266,7 +266,7 @@ const Session = () => {
       const signer = provider.getSigner();
       const myUniversalProfile = new ethers.Contract(address || '', UniversalProfile.abi, signer);
   
-      const sessionContract = new ethers.Contract("0xdAB89b82973a71d75d4630Ee2217BC984DB05830", SessionKeysContract.abi, signer);
+      const sessionContract = new ethers.Contract("0x934EBAdAf78c7976fA8Ca37c1b24315eD485e16F", SessionKeysContract.abi, signer);
   
       const amount = "0.0001";
       const amountInWei = ethers.utils.parseEther(amount.toString());

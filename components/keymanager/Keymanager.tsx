@@ -670,7 +670,7 @@ const Keymanager = () => {
                               permissionKey="ENCRYPT"
                             />
                           </div>
-                          <span className="opacity-75 text-purple text-xxsmall">Allow encryption of messages using the wallet's keys</span>
+                          <span className="opacity-75 text-purple text-xxsmall">Allow encryption of messages using the wallet&apos;s keys</span>
                         </div>
                         <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
                           <div className="flex w-full justify-between">
@@ -682,7 +682,7 @@ const Keymanager = () => {
                               permissionKey="DECRYPT"
                             />
                           </div>
-                          <span className="opacity-75 text-purple text-xxsmall">Allow decryption of encrypted messages using the wallet's keys</span>
+                          <span className="opacity-75 text-purple text-xxsmall">Allow decryption of encrypted messages using the wallet&apos;s keys</span>
                         </div>
                         <div className="flex flex-col sm:w-full md:w-[300px] gap-4 gap-[10px]">
                           <div className="flex w-full justify-between">
@@ -804,7 +804,7 @@ const Keymanager = () => {
                               permissionKey="DELEGATECALL"
                             />
                           </div>
-                          <span className="opacity-75 text-purple text-xxsmall">Permit running code from any smart contract inside the wallet's environment</span>
+                          <span className="opacity-75 text-purple text-xxsmall">Permit running code from any smart contract inside the wallet&apos;s environment</span>
                         </div>
                       </div>
                     </div>

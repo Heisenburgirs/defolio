@@ -3,16 +3,16 @@ const TransactionModal = ({ successMsg, message1, message2, message3, onBackButt
   
   const stepText = [message1, message2, message3, "Transaction Failed"];
   const stepImages = [
-    <div className="loading opacity-75 w-full flex justify-center items-center p-16">
+    <div key="loading" className="loading opacity-75 w-full flex justify-center items-center p-16">
       <span className="loading__dot"></span>
       <span className="loading__dot"></span>
       <span className="loading__dot"></span>
     </div>,
     
-    <div className="success-animation"></div>,
-
-    <div className="error-animation"></div>
-  ];
+    <div key="success" className="success-animation"></div>,
+  
+    <div key="error" className="error-animation"></div>
+  ];  
 
   return (
     <div className={`flex w-full h-full flex-col justify-center items-center mt-[-100px] ${(transactionStep === 3 || transactionStep === 4) && "gap-8"}`}>
