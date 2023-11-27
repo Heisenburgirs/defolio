@@ -65,11 +65,13 @@ DeFolio is an innovative platform developed for the Lukso ecosystem, designed to
 # Vaults
 
 ***Asset Isolation:*** Vaults can be used to isolate assets, providing an additional layer of security.
+
 ***Contract Interaction:*** Users can interact with contracts using vaults, offering more control over asset management.
 
 # Session
 
 ***Temporary Access:*** Users can grant temporary access to parts of their UP for specific purposes, such as gaming or trading.
+
 ***Controlled Permissions:*** The ability to set specific permissions and deadlines for session keys allows for controlled, secure access.
 
 ## Further Improvements
@@ -85,6 +87,10 @@ A URD can be setup that deploys new instance of a vault for specific LSP7/LSP8 t
 # Session Key
 
 Currently the session key contract is very basic and limited. There's no separation of permissions or to what permission each address has access to. Further improvements can be made to allow Universal Profile to give address Y access to permission X for N amount of time. Meaning, currently by default any address added to the session key contract has access to all permissions granted to the session key contract by the Universal Profile.
+
+## Development
+
+npm install
 
 ```bash
 npm run dev
