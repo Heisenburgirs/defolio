@@ -86,7 +86,9 @@ A URD can be setup that deploys new instance of a vault for specific LSP7/LSP8 t
 
 # Session Key
 
-Currently the session key contract is very basic and limited. There's no separation of permissions or to what permission each address has access to. Further improvements can be made to allow Universal Profile to give address Y access to permission X for N amount of time. Meaning, currently by default any address added to the session key contract has access to all permissions granted to the session key contract by the Universal Profile.
+***Objective:*** Grant temporary access to UP using Keymanager
+
+***Description:*** Currently the session key contract is very basic and limited. There's no separation of permissions or to what permission each address has access to. Further improvements can be made to allow Universal Profile to give address Y access to permission X for N amount of time. Meaning, currently by default any address added to the session key contract has access to all permissions granted to the session key contract by the Universal Profile.
 
 ## Development
 
