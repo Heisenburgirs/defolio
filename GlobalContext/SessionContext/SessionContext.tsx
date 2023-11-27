@@ -10,6 +10,7 @@ interface SessionedAddress {
   address: string,
   startTime: string,
   session: string,
+  isExpired: boolean;
 }
 
 interface SessionKeysAddresses {
@@ -46,6 +47,11 @@ export const SessionKeysprovider: React.FC<SessionProviderProps> = ({ children }
     address,
     'https://rpc.testnet.lukso.network'
   );
+
+  const formatTimestamp = (timestamp: number) => {
+    const date = new Date(timestamp * 1000); // Convert seconds to milliseconds
+    return date.toLocaleString('en-US', { hour12: true });
+  }
   
   const fetchSessionKeys = async () => {
     setIsLoading(true)
@@ -64,21 +70,28 @@ export const SessionKeysprovider: React.FC<SessionProviderProps> = ({ children }
       addresses = [sessionKeysAddresses.value]; // If it's a single string, make it an array
     }
 
-    console.log(addresses)
-    console.log(addresses[0])
     const contractInstace = new ethers.Contract(addresses[0], SessionKeysContract.abi, signer)
 
     const getSessionedAddresses = await contractInstace.getAllGrantedSessionAddresses()
 
     const allSessionedAddresses = [];
 
-    // Loop over each address and get its session details
+    const currentTimestamp = Math.floor(Date.now() / 1000); // Current time in seconds
+
     for (const address of getSessionedAddresses) {
       const sessionData = await contractInstace.sessions(address);
+  
+      const sessionStart = parseInt(sessionData[0].toString(), 10); // Session start time in seconds
+      const sessionDuration = parseInt(sessionData[1].toString(), 10); // Session duration in seconds
+      const sessionEnd = sessionStart + sessionDuration; // Calculate session end time
+  
+      const isExpired = currentTimestamp > sessionEnd; // Check if current time is past session end time
+  
       const sessionObj = {
-        address: address,
-        startTime: sessionData[0].toString(), // Convert BigNumber to string
-        session: sessionData[1].toString()   // Convert session duration to string
+          address: address,
+          startTime: formatTimestamp(sessionStart), // Convert start time to formatted string
+          session: formatTimestamp(sessionEnd),    // Convert end time to formatted string
+          isExpired: isExpired,
       };
       allSessionedAddresses.push(sessionObj);
     }

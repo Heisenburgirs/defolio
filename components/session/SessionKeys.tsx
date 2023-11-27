@@ -12,12 +12,21 @@ import { NotificationType, notify } from "../toast/Toast";
 import { isValidEthereumAddress } from "@/app/utils/useIsValidEthereumAddress";
 import lightPurpleArrow from '@/public/icons/lightPurple_arrow.png';
 import purpleArrow from '@/public/icons/purple_arrow.png';
+import { formatAddress } from "@/app/utils/useFormatAddress";
+
+interface VisibilityStates {
+  [key: string]: boolean;
+}
 
 const Session = () => {
   const { address } = useAccount()
   const { setIndexKey, sessionAddress, sessionedAddresses, isLoading } = useSessionKeys()
 
+  const activeSessions = sessionedAddresses?.filter(session => !session.isExpired);
+  const expiredSessions = sessionedAddresses?.filter(session => session.isExpired);
+
   const [hasDeployedSession, setHasDeployedSession] = useState(false);
+  const [sessionType, setSessionType] = useState('Active');
 
   const [isDeploying, setIsDeploying] = useState(true);
   const [isSettingData, setIsSettingData] = useState(false);
@@ -32,6 +41,12 @@ const Session = () => {
   const [sessionTime, setSessionTime] = useState('');
   const [isOpen, setIsOpen] = useState(false);
   const [hover, setHover] = useState(false);
+
+  const [updatedSession, setUpdatedSession] = useState('');
+  const [hasProvidedUpdatedTime, setHasProvidedUpdatedTime] = useState<boolean>(false);
+  const [updatedSessionAddress, setUpdatedSessionAddress] = useState('');
+  const [isUpdatingSession, setIsUpdatingSession] = useState(false)
+  const [isTerminatingSession, setIsTerminatingSession] = useState(false)
 
   type TimeUnit = 'seconds' | 'minutes' | 'hours' | 'days';
   const [selectedOption, setSelectedOption] = useState<TimeUnit>('hours');
@@ -53,6 +68,30 @@ const Session = () => {
       setIsOpen(false);
   };
 
+  const [visibilityStates, setVisibilityStates] = useState<VisibilityState>({});
+  const [dropdownVisible, setDropdownVisible] = useState<Record<string, boolean>>({});
+
+  const togglePermissionsDropdown = (controllerAddress: string) => {
+    if (visibilityStates[controllerAddress]) {
+        // Start closing animation immediately
+        setDropdownVisible(prev => ({ ...prev, [controllerAddress]: false }));
+
+        // Delay hiding the dropdown until animation completes
+        setTimeout(() => {
+            setVisibilityStates(prevStates => ({
+                ...prevStates,
+                [controllerAddress]: false
+            }));
+        }, 200); // 500ms matches the duration of the 'conceal' animation
+    } else {
+        // Open dropdown immediately and start opening animation
+        setVisibilityStates(prevStates => ({
+            ...prevStates,
+            [controllerAddress]: true
+        }));
+        setDropdownVisible(prev => ({ ...prev, [controllerAddress]: true }));
+    }
+  };
 
   useEffect(() => {
     if (sessionAddress) {
@@ -165,6 +204,14 @@ const Session = () => {
     return inputNumber * timeUnitMultipliers[selectedOption];
   };
 
+  const calculateUpdatedSessionDuration = () => {
+    const inputNumber = parseInt(updatedSession, 10);
+    if (isNaN(inputNumber) || inputNumber <= 0) {
+        return 0;
+    }
+
+    return inputNumber * timeUnitMultipliers[selectedOption];
+  };
 
   const grantSession = async () => {
     if (!sessionTime) {
@@ -218,30 +265,150 @@ const Session = () => {
       const signer = provider.getSigner();
       const myUniversalProfile = new ethers.Contract(address || '', UniversalProfile.abi, signer);
   
-      const sessionContract = new ethers.Contract("0xB125c35859ae4fBe4ce96445565FE70D03dF4602", SessionKeysContract.abi, signer);
+      if (sessionAddress) {
+        const sessionContract = new ethers.Contract(sessionAddress[0], SessionKeysContract.abi, signer);
+    
+        // Convert the amount from LYX to Wei
+        //const amountInWei = ethers.utils.parseEther(.toString());
+    
+        // Prepare the parameters for the execute function
+        const recipientAddress = "0x368731AE2E23e72751C432A935A2CF686Bb72AAC";
+    
+        // Execute the transfer
+        //const transaction = await sessionContract.execute(0, "0xfB8a1f71669B1171dbc50fac869f02223EcfEA8F", 0, sessionCallData);
+        /*const tx = await sessionContract.execute({
+          address,
+          recipientAddress,
+          ethers.utils.parseEther(sendAmount)
+        });*/
+    
+        console.log('LYX transfer executed successfully');
 
-      const sendAmount = "0.0001"
-  
-      // Convert the amount from LYX to Wei
-      const amountInWei = ethers.utils.parseEther(sendAmount.toString());
-  
-      // Prepare the parameters for the execute function
-      const recipientAddress = "0x368731AE2E23e72751C432A935A2CF686Bb72AAC";
-  
-      // Execute the transfer
-      //const transaction = await sessionContract.execute(0, "0xfB8a1f71669B1171dbc50fac869f02223EcfEA8F", 0, sessionCallData);
-      /*const tx = await sessionContract.execute({
-        address,
-        recipientAddress,
-        ethers.utils.parseEther(sendAmount)
-      });*/
-  
-      console.log('LYX transfer executed successfully');
+      }
     } catch (error) {
       console.error('Error executing session transfer:', error);
     }
   };
+
+  const updateSession = async () => {
+    if (!updatedSession) {
+      notify("Session Time Required", NotificationType.Error)
+      return
+    }
+
+    setIsUpdatingSession(true)
+    try {
+      const provider = new ethers.providers.Web3Provider(window.lukso);
+      
+      const signer = provider.getSigner();
+      const myUniversalProfile = new ethers.Contract(address || '', UniversalProfile.abi, signer);
+
+      if (sessionAddress) {
+        try {
+          const sessionContract = new ethers.Contract(sessionAddress[0], SessionKeysContract.abi, signer);
   
+          const sessionDuration = calculateUpdatedSessionDuration();
+  
+          const update = await sessionContract.updateSessionDuration(updatedSessionAddress, sessionDuration)
+
+          notify("Session Updated Successfully", NotificationType.Success)
+          setIndexKey(5)
+          setUpdatedSession('')
+          setUpdatedSessionAddress('')
+          setIsUpdatingSession(false)
+        } catch (err) {
+          // First, check if err is an object and has a 'code' property
+          if (typeof err === 'object' && err !== null && 'code' in err) {
+            // Now TypeScript knows err is an object and has a 'code' property
+            const errorCode = (err as { code: unknown }).code;
+            if (errorCode === 4001) {
+              // Handle user's rejection
+              console.log("User declined the transaction");
+              notify("Signature Declined", NotificationType.Error);
+            } else {
+              // Handle other errors
+              console.log("ERROR UPDATING SESSION", err);
+              notify("Error Updating Session", NotificationType.Error);
+            }
+          }
+        }
+
+      }
+    } catch (err) {
+      // First, check if err is an object and has a 'code' property
+      if (typeof err === 'object' && err !== null && 'code' in err) {
+        // Now TypeScript knows err is an object and has a 'code' property
+        const errorCode = (err as { code: unknown }).code;
+        if (errorCode === 4001) {
+          // Handle user's rejection
+          console.log("User declined the transaction");
+          notify("Signature Declined", NotificationType.Error);
+        } else {
+          // Handle other errors
+          console.log("ERROR UPDATING SESSION", err);
+          notify("Error Updating Session", NotificationType.Error);
+        }
+      } else {
+        // Handle the case where err is not an object or doesn't have 'code'
+        console.log("An unexpected error occurred", err);
+      }
+    }
+  }
+  
+  const terminateSession = async (sessionToTerminate: string) => {
+    setIsTerminatingSession(true)
+    try {
+      const provider = new ethers.providers.Web3Provider(window.lukso);
+      
+      const signer = provider.getSigner();
+
+      if (sessionAddress) {
+        try {
+          const sessionContract = new ethers.Contract(sessionAddress[0], SessionKeysContract.abi, signer);
+  
+          const update = await sessionContract.updateSessionDuration(sessionToTerminate, 0)
+
+          notify("Session Terminated", NotificationType.Success)
+          setIndexKey(5)
+          setIsTerminatingSession(false)
+        } catch (err) {
+          // First, check if err is an object and has a 'code' property
+          if (typeof err === 'object' && err !== null && 'code' in err) {
+            // Now TypeScript knows err is an object and has a 'code' property
+            const errorCode = (err as { code: unknown }).code;
+            if (errorCode === 4001) {
+              // Handle user's rejection
+              console.log("User declined the transaction");
+              notify("Signature Declined", NotificationType.Error);
+            } else {
+              // Handle other errors
+              console.log("ERROR UPDATING SESSION", err);
+              notify("Error Updating Session", NotificationType.Error);
+            }
+          }
+        }
+
+      }
+    } catch (err) {
+      // First, check if err is an object and has a 'code' property
+      if (typeof err === 'object' && err !== null && 'code' in err) {
+        // Now TypeScript knows err is an object and has a 'code' property
+        const errorCode = (err as { code: unknown }).code;
+        if (errorCode === 4001) {
+          // Handle user's rejection
+          console.log("User declined the transaction");
+          notify("Signature Declined", NotificationType.Error);
+        } else {
+          // Handle other errors
+          console.log("ERROR UPDATING SESSION", err);
+          notify("Error Updating Session", NotificationType.Error);
+        }
+      } else {
+        // Handle the case where err is not an object or doesn't have 'code'
+        console.log("An unexpected error occurred", err);
+      }
+    }
+  }
 
   return (
     <div className="flex w-full h-full bg-white shadow rounded-15 py-8 px-6">
@@ -322,7 +489,6 @@ const Session = () => {
                         <div className="cursor-pointer p-2 border border-lightPurple rounded-15 px-6" onClick={toggleDropdown}>
                             {selectedOption}
                             <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                                {/* Dropdown Icon */}
                             </span>
                         </div>
   
@@ -369,7 +535,100 @@ const Session = () => {
                 </div>
               </div>
               <div>
-  
+
+              <div className="flex w-[200px] gap-2 items-center md:justify-center border border-lightPurple rounded-20 p-[2px]">
+                <div 
+                  onClick={() => setSessionType("Active")} 
+                  className={`sm:w-1/2 text-center text-xsmall text-lightPurple rounded-20 px-4 py-2 hover:cursor-pointer ${sessionType === "Active" ? "bg-purple text-white" : "hover:bg-lightPurple hover:bg-opacity-50 hover:text-white"} transition`}
+                >
+                  Active
+                </div>
+                <div 
+                  onClick={() => setSessionType("Expired")} 
+                  className={`sm:w-1/2 text-center text-xsmall text-lightPurple rounded-20 px-6 py-2 hover:cursor-pointer ${sessionType === "Expired" ? "bg-purple text-white" : "hover:bg-lightPurple hover:bg-opacity-50 hover:text-white"} transition`}
+                >
+                  Expired
+                </div>
+              </div>
+              <div className={`flex flex-col gap-6 h-full bg-white rounded-15 py-8 transition`}>
+                {
+                  (sessionType === "Active" ? activeSessions : expiredSessions)?.map((sessionedAddress, index) => (
+                    <div key={index} className="flex w-full hidden sm:table-header-group grid grid-cols-12 border border-lightPurple border-opacity-25 rounded-15 py-2 px-4">
+                      <div className="flex w-full justify-between items-center py-2">
+                        <div className="flex items-center gap-4 sm:col-span-2 base:col-span-1 lg:col-span-5 text-purple font-normal">
+                          <div className="text-small font-bold">{formatAddress(sessionedAddress.address)}</div>
+                        </div>
+                        <div className="sm:col-span-1 lg:col-span-4 text-purple font-normal flex">
+                          <div onClick={() => togglePermissionsDropdown(sessionedAddress.address)} className="font-bold text-xsmall transition hover:cursor-pointer">show more</div>
+                        </div>
+                      </div> 
+                      {visibilityStates[sessionedAddress.address] && (
+                        <div  
+                          className={`flex w-full justify-between ${dropdownVisible[sessionedAddress.address] ? 'animate-reveal' : 'animate-conceal'} py-4 transition text-xsmall overflow-y-auto hide-scrollbar`}
+                          style={{ animationFillMode: 'forwards' }}
+                        >
+                          <div className="flex flex-col justify-between">
+                            <div className="flex w-[150px] gap-4">
+                              <input 
+                                type="number" 
+                                placeholder="Session Time..." 
+                                className="px-4 py-2 sm:w-[200px] base:w-[350px] md:w-[500px] border border-lightPurple rounded-15 focus:outline-purple"
+                                onChange={(e) => { setUpdatedSession(e.target.value); setUpdatedSessionAddress(sessionedAddress.address); setHasProvidedUpdatedTime(isValidEthereumAddress(e.target.value));}}
+                              />
+                              <div className="relative w-48">
+                                <div className="cursor-pointer p-2 border border-lightPurple rounded-15 px-6" onClick={toggleDropdown}>
+                                    {selectedOption}
+                                    <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                                    </span>
+                                </div>
+          
+                                {isOpen && (
+                                    <div className="absolute z-10 w-full mt-1 bg-white border border-lightPurple rounded-15 px-2">
+                                        {options.map((option, index) => (
+                                            <div 
+                                                key={index} 
+                                                className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                                                onClick={() => handleOptionClick(option)}
+                                            >
+                                                {option}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                              </div>
+                            </div>
+                            <div className="flex gap-4">
+                              <button disabled={isUpdatingSession} onClick={updateSession} className="mt-32 flex border border-lightPurple py-2 px-4 text-lightPurple hover:bg-lightPurple rounded-15 hover:text-white hover:cursor-pointer transition text-center items-center justify-center">
+                                {isUpdatingSession ? "Updating..." : "Update Session"}
+                              </button>
+                              {sessionType === "Active" && <button disabled={isTerminatingSession} onClick={() => {terminateSession(sessionedAddress.address)}} className="mt-32 flex border border-red py-2 px-4 text-red hover:bg-red rounded-15 hover:text-white hover:cursor-pointer transition text-center items-center justify-center">
+                                {isTerminatingSession ? "Terminating..." : "Terminate Session"}
+                              </button> }
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-4 py-2">
+                            <div className="text-medium text-purple font-bold">Session</div>
+                            <div className="flex gap-2 text-lightPurple">
+                              <span className="font-bold text-purple">Start Time:</span> {sessionedAddress.startTime}
+                            </div>
+                            <div className="flex gap-2 text-lightPurple">
+                            <span className="font-bold text-purple">End Time:</span> {sessionedAddress.session}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ))
+                }
+                {sessionType === "Active"? (
+                  activeSessions && activeSessions.length === 0 && <div className="flex w-full justify-center py-4 text-lightPurple">No Active Sessions</div>
+                )
+                :
+                (
+                  expiredSessions && expiredSessions.length === 0 && <div className="flex w-full justify-center py-4  text-lightPurple">No Expired Sessions</div>
+                )}
+              </div>
+
               </div>
                 <div className="flex bg-black rounded-15 py-2 px-4 hover:cursor-pointer text-white" onClick={deploy}>Deploy</div>
                 <div className="flex bg-black rounded-15 py-2 px-4 hover:cursor-pointer text-white" onClick={grantSession}>Grant permission</div>

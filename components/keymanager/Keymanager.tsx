@@ -127,13 +127,16 @@ const Keymanager = () => {
   
   const handleReset = () => {
     // Clear everything from changedPermissions
+    setTransactionStep(1)
     setChangedPermissions(controllersPermissions);
     setControllerAddresses([])
   };
 
   // Existing Controller Permissions
   const handleConfirm = async () => {
-    console.log(changedPermissions)
+    setArePermissionsChanged(false)
+    setIsChangePermissionInitiated(true)
+    setTransactionStep(1)
     const erc725 = new ERC725(
       LSP6Schema as ERC725JSONSchema[],
       address,
@@ -173,8 +176,6 @@ const Keymanager = () => {
 
     try {
       const tx = await myUniversalProfile.setDataBatch(allKeys, allValues);
-      setIsChangePermissionInitiated(true)
-      setTransactionStep(2)
 
       const receipt = await tx.wait();
       setTransactionStep(3)
@@ -464,7 +465,7 @@ const Keymanager = () => {
       {addController ? (
         isAdditionInitiated ? (
           <TransactionModal
-            successMsg='Controller Successfuly Updated'
+            successMsg='Controller Successfuly Set'
             onBackButtonClick={() => {setAddController(false)}} 
             transactionStep={transactionStep}
             setTransactionStep={setTransactionStep}
@@ -547,7 +548,7 @@ const Keymanager = () => {
       (
         isChangePermissionInitiated ? (
           <TransactionModal
-            successMsg='Controller Successfuly Set'
+            successMsg='Controller Successfuly Updated'
             onBackButtonClick={() => {setIsChangePermissionInitiated(false)}} 
             transactionStep={transactionStep}
             setTransactionStep={setTransactionStep}
